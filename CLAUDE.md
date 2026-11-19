@@ -37,7 +37,7 @@ npx tsc --noEmit     # 타입 체크 (npm 스크립트는 없음)
 - 페이지는 서버 컴포넌트로 두고, 상호작용이 필요한 부분(PDF 다운로드 버튼 등)만 `"use client"` 컴포넌트로 분리합니다.
 
 ### 데이터 흐름
-- 별도 DB 없이 노션이 유일한 저장소입니다. 노션 조회 계층(F001)과 PDF 생성(F003)은 아직 구현 전이며, 구현 시 `"use cache"`/`<Suspense>` 경계 안에서 조회합니다.
+- 별도 DB 없이 노션이 유일한 저장소입니다. 노션 조회 계층(F001)은 `src/lib/notion/`의 `getInvoice`로 코드가 작성되어 있으나 실제 노션 DB로 검증하기 전입니다(ROADMAP Task 005). PDF 생성(F003)은 아직 구현 전이며 `DownloadPdfButton`은 동작 없는 골격입니다. 조회는 `"use cache"`/`<Suspense>` 경계 안에서 합니다.
 - 환경변수는 `NOTION_API_KEY`, `NOTION_DATABASE_ID` (서버 전용, `.env.example` 참고).
 
 ## 이 저장소 특유의 함정

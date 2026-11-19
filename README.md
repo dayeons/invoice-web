@@ -18,9 +18,9 @@
 
 ## 핵심 기능
 
-- F001 노션 데이터베이스 연동
+- F001 노션 데이터베이스 연동 (코드 작성됨, 실제 노션 DB 검증 전)
 - F002 견적서 조회
-- F003 PDF 다운로드
+- F003 PDF 다운로드 (버튼 골격만 있음, 구현 예정)
 - F011 견적서 유효성 검증 (404 처리)
 - F012 반응형 레이아웃
 
@@ -32,7 +32,8 @@
 - Styling: TailwindCSS v4
 - UI Components: shadcn/ui (`base-nova`, Base UI 기반), lucide-react
 - 유틸: sonner, next-themes, date-fns
-- 예정: @notionhq/client, @react-pdf/renderer (또는 Puppeteer)
+- 노션 연동: @notionhq/client
+- 예정: @react-pdf/renderer (또는 Puppeteer)
 
 ## 시작하기
 
@@ -46,8 +47,9 @@ npm run lint                 # ESLint
 
 ## 개발 상태
 
-- 완료: 스타터 예제 제거, 기본 라우트(`/`, `/invoice/[id]`, 404) 골격
-- 예정: 노션 조회(F001), 견적서 렌더링(F002), PDF 다운로드(F003)
+- 완료: 스타터 예제 제거, 기본 라우트(`/`, `/invoice/[id]`, 404) 골격, 견적서 본문 UI와 반응형 레이아웃(F002, F012, 더미 데이터로 검증)
+- 코드 작성됨, 실제 노션 DB 검증 전: 노션 조회(F001)
+- 예정: PDF 다운로드(F003, 버튼은 골격만 있음)
 
 ## 문서
 

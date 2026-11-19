@@ -37,12 +37,12 @@ PRD에는 Next.js 15.5.3으로 적혀 있지만 실제 설치 버전은 아래�
 | 노션 속성 매핑과 추출 헬퍼 | 완료 | `src/lib/notion/properties.ts` |
 | 노션 조회 계층 `getInvoice` (`"use cache"`, ID 형식 검증, DB 소속 확인, 관계 25개 초과 페이지네이션, 404/에러 분기) | 코드 작성됨, 실제 노션 DB 검증 전 | `src/lib/notion/client.ts`, `src/lib/notion/invoice.ts` |
 | 날짜/통화 포맷 유틸 | 완료 | `src/lib/format.ts` |
-| 견적서 본문 UI (F002) | 미구현 (연동 확인용 임시 출력만 있음) | `src/app/invoice/[id]/page.tsx` |
+| 견적서 본문 UI (F002) | 구현됨, 더미 데이터로 검증 (404 HTTP 상태 코드만 남음, Task 004 참조). 노션 실데이터 검증은 Task 005 | `src/app/invoice/[id]/page.tsx`, `src/components/features/invoice/` |
 | PDF 생성/다운로드 (F003) | 미구현 | |
 | 공유 URL 생성 (F010) | 미구현 (`siteConfig.url`이 `localhost`로 고정) | `src/config/site.ts` |
-| `/tasks` 작업 파일 디렉토리 | 없음 (Task 003 시작 시 생성) | |
+| `/tasks` 작업 파일 디렉토리 | 있음 (`000-sample.md` 템플릿, `003`, `004` 작업 파일) | `tasks/` |
 
-> 참고: 프로젝트 `CLAUDE.md`에는 "노션 조회 계층은 아직 구현 전"이라고 적혀 있지만, 실제로는 `src/lib/notion/`에 조회 계층이 작성되어 있습니다. Task 005를 마칠 때 `CLAUDE.md`의 해당 문장도 고칩니다.
+> 참고: `CLAUDE.md`와 `README.md`의 낡은 문구는 "코드 작성됨, 실제 노션 DB 검증 전"으로 고쳤습니다(2026-11-19). Task 005를 마칠 때 두 문서의 해당 문구를 "검증 완료"로 다시 갱신합니다.
 
 ## 개발 워크플로우
 
@@ -113,6 +113,8 @@ PRD에는 Next.js 15.5.3으로 적혀 있지만 실제 설치 버전은 아래�
 ### Phase 1: 애플리케이션 골격 구축 ✅
 
 > 참고: Task 001, 002는 테스트 원칙을 도입하기 전에 코드 확인으로 완료 처리했습니다. 라우트, 404, 에러 경계, 타입 매핑 동작은 Task 004, 005, 008의 Playwright MCP 시나리오로 다시 검증합니다.
+>
+> 2026-11-19 검증: `lint`, `tsc --noEmit`, `build` 통과. 홈 안내 문구와 `/invoice/abc` 404 화면, 375/768/1280px 가로 스크롤 없음, 콘솔 에러 0을 Playwright MCP로 확인했습니다. 단, `/invoice/abc`의 HTTP 상태 코드는 404가 아니라 200입니다(Task 004 기록 참조).
 
 - **Task 001: 라우트 구조와 공통 레이아웃 골격 구축** ✅ - 완료
   - See: 작업 파일 없음 (스타터 정리 단계에서 완료, 기존 코드로 완료 확인)
@@ -131,22 +133,22 @@ PRD에는 Next.js 15.5.3으로 적혀 있지만 실제 설치 버전은 아래�
 
 ### Phase 2: UI/UX 완성 (더미 데이터 활용)
 
-- **Task 003: 견적서 표시 컴포넌트와 더미 데이터 구현** - 우선순위
-  - `tasks/` 디렉토리와 `tasks/000-sample.md` 템플릿, `tasks/003-invoice-components.md` 생성
-  - `src/lib/mock/invoice.ts`에 `Invoice` 타입을 따르는 더미 데이터 작성 (일반 견적 1건, 항목 0개 1건, 항목 30개 이상 1건, 날짜/상태가 비어 있는 1건)
-  - `src/components/features/invoice/`에 서버 컴포넌트로 구현
+- **Task 003: 견적서 표시 컴포넌트와 더미 데이터 구현** ✅ - 완료 (See: /tasks/003-invoice-components.md)
+  - ✅ `tasks/` 디렉토리와 `tasks/000-sample.md` 템플릿, `tasks/003-invoice-components.md` 생성
+  - ✅ `src/lib/mock/invoice.ts`에 `Invoice` 타입을 따르는 더미 데이터 작성 (일반 견적 1건, 항목 0개 1건, 항목 30개 이상 1건, 날짜/상태가 비어 있는 1건). 개발 환경 전용 `getMockInvoice(id)`로 해석
+  - ✅ `src/components/features/invoice/`에 서버 컴포넌트로 구현
     - `InvoiceHeader`: 견적서 번호, 클라이언트명, 상태 배지
     - `InvoiceMeta`: 발행일, 유효기간 (`formatDate`, 값이 `null`이면 "-" 표시)
     - `InvoiceItemsTable`: 항목명, 수량, 단가, 금액 (shadcn `table`)
     - `InvoiceSummary`: 소계와 총액 (`formatCurrency`)
-  - 공통 요소는 `src/components/common/`에 둠 (예: 상태 값을 배지 색상으로 바꾸는 `StatusBadge`)
-  - 레이어 규칙 준수: `ui ← common ← layout ← features`, 역방향 import 없음
-  - 확인용 렌더링 경로: 컴포넌트를 브라우저에서 볼 수 있도록 개발 환경 전용 확인 화면을 둠 (Task 004의 `demo` 분기를 먼저 만들거나 임시 경로 사용, Task 005에서 함께 제거)
+  - ✅ 공통 요소는 `src/components/common/`에 둠 (예: 상태 값을 배지 색상으로 바꾸는 `StatusBadge`)
+  - ✅ 레이어 규칙 준수: `ui ← common ← layout ← features`, 역방향 import 없음
+  - ✅ 확인용 렌더링 경로: 컴포넌트를 브라우저에서 볼 수 있도록 개발 환경 전용 확인 화면을 둠 (Task 004의 `demo` 분기를 먼저 만들거나 임시 경로 사용, Task 005에서 함께 제거)
   - 구현 후 테스트 수행: 아래 체크리스트를 Playwright MCP로 수행하고 결과를 작업 파일에 기록
   - 완료 기준: 모든 컴포넌트가 `invoice: Invoice` props만으로 렌더링되고, 4가지 더미 데이터 모두 화면이 깨지지 않음. `lint`, `tsc --noEmit` 통과. 테스트 체크리스트 전 항목 통과
   - **테스트 체크리스트 (Playwright MCP)**
     - 정상: 일반 견적 더미 → 견적서 번호, 클라이언트명, 상태 배지, 발행일, 유효기간, 항목 행, 총액이 모두 보이고 값이 더미 데이터와 일치
-    - 데이터 정합성: 금액이 `formatCurrency` 형식(예: `1,500,000원`)이고, 항목 금액 합계와 `InvoiceSummary` 총액이 일치
+    - 데이터 정합성: 금액이 `formatCurrency` 형식(예: `₩1,500,000`)이고, 항목 금액 합계와 `InvoiceSummary` 총액이 일치
     - 엣지(항목 0개): 표 자리에 빈 상태 안내 문구가 보이고 총액은 0원, 레이아웃이 깨지지 않음
     - 엣지(항목 30개 이상): 모든 행이 렌더링되고 행 수가 더미 데이터 항목 수와 같음
     - 엣지(날짜/상태 비어 있음): 발행일과 유효기간 자리에 "-", 상태 배지는 숨기거나 기본 표시. 콘솔 에러 없음
@@ -155,7 +157,8 @@ PRD에는 Next.js 15.5.3으로 적혀 있지만 실제 설치 버전은 아래�
     - 반응형: 375/768/1280px 폭에서 4가지 더미 데이터 모두 텍스트 잘림이나 겹침 없음 (스크린샷 확인)
     - 접근성: 접근성 스냅샷에서 표에 열 헤더가 있고, 배지가 텍스트로 읽힘
 
-- **Task 004: 견적서 조회 페이지 UI와 반응형 레이아웃 완성 (F002, F012)**
+- **Task 004: 견적서 조회 페이지 UI와 반응형 레이아웃 완성 (F002, F012)** - 우선순위
+  - 진행 상황: 코드 작성 완료(모바일 카드형 목록, 스켈레톤 분리, `DownloadPdfButton` 골격, `print:hidden`). Playwright MCP 검증 통과, 1건 남음(`/invoice/abc` HTTP 상태가 Cache Components 구조상 200이며 Task 005에서 함께 판단). 스켈레톤 위치 비교는 통과. `error.tsx`는 `retry`로 수정해 복구 동작 확인. See: /tasks/004-invoice-page-ui.md
   - `/invoice/[id]` 페이지의 임시 출력을 Task 003 컴포넌트 조합으로 교체
   - 개발 환경에서만 `id`가 `demo`이면 더미 데이터를 렌더링하는 분기 추가 (Phase 3의 Task 005에서 제거)
   - 반응형 (F012): 모바일(375px)에서는 항목 표를 카드형 목록으로 바꾸거나 가로 스크롤 처리, 태블릿(768px)과 데스크톱(1280px)에서는 표 레이아웃
@@ -187,7 +190,7 @@ PRD에는 Next.js 15.5.3으로 적혀 있지만 실제 설치 버전은 아래�
   - 테스트용 노션 Invoices/Items DB를 만들고 Integration 연결, `.env.local` 설정 후 실제 데이터로 매핑 검증 (컬럼명과 타입이 `properties.ts`와 일치하는지)
   - Task 004의 `demo` 더미 분기 제거, 페이지가 `getInvoice` 결과만 렌더링하도록 정리
   - 항목 조회 동시성 제한 추가 검토: 노션 API 평균 초당 3회 제한이 있으므로 항목이 많을 때 `Promise.all` 대신 묶음 단위(예: 3개씩)로 조회
-  - `CLAUDE.md`의 "노션 조회 계층은 아직 구현 전" 문구 수정
+  - `CLAUDE.md`와 `README.md`의 "실제 노션 DB 검증 전" 문구를 검증 결과에 맞게 갱신
   - 테스트용 노션 데이터 준비: 정상 견적 1건, 항목 0개 1건, 항목 25개 이상 1건, 날짜/상태/총 금액이 빈 1건, 긴 항목명과 특수문자 항목명 1건, 10억 원 이상 금액 1건, 휴지통 페이지 1건, Integration에 공유된 다른 DB 페이지 1건
   - 구현 후 테스트 수행: 매핑 검증, `demo` 분기 제거, 동시성 제한 각 단계 후 관련 시나리오를 확인하고, 마지막에 전체 체크리스트를 Playwright MCP로 수행해 결과를 작업 파일에 기록
   - 참고: 위 ✅ 세 항목은 코드 작성만 끝난 상태이며, 아래 체크리스트를 통과하기 전까지 Task 005는 완료가 아님
