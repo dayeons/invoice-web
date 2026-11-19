@@ -13,11 +13,12 @@ import {
 } from "@/components/ui/empty"
 
 // 런타임 에러 경계 — 하위 라우트에서 발생한 에러를 잡아 복구 버튼을 제공합니다.
+// 서버 컴포넌트 에러는 데이터를 다시 가져와야 복구되므로 reset 대신 retry를 씁니다.
 export default function Error({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  retry: () => void
 }) {
   return (
     <main className="flex min-h-svh items-center justify-center p-6">
@@ -32,7 +33,7 @@ export default function Error({
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button onClick={reset}>다시 시도</Button>
+          <Button onClick={() => retry()}>다시 시도</Button>
         </EmptyContent>
       </Empty>
     </main>
