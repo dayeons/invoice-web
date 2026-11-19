@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 환경변수 계약 파일은 값이 없으므로 추적합니다
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# shrimp task manager 로컬 작업 상태
+shrimp_data/
+
+# Playwright MCP 스냅샷/콘솔 로그 캐시
+.playwright-mcp/
