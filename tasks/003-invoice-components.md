@@ -5,7 +5,7 @@
 
 ## 관련 파일
 - `src/lib/mock/invoice.ts`
-- `src/components/common/status-badge.tsx`
+- `src/components/common/statusBadge.tsx`
 - `src/components/features/invoice/` (header, meta, items-table, summary, view)
 - `src/app/invoice/[id]/page.tsx` (개발 전용 `demo`, `demo-empty`, `demo-many`, `demo-blank` 분기, Task 005에서 제거)
 

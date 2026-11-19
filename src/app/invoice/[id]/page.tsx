@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Container } from "@/components/layout/container";
-import { InvoiceSkeleton } from "@/components/features/invoice/invoice-skeleton";
-import { InvoiceView } from "@/components/features/invoice/invoice-view";
+import { InvoiceSkeleton } from "@/components/features/invoice/invoiceSkeleton";
+import { InvoiceView } from "@/components/features/invoice/invoiceView";
 import { getMockInvoice } from "@/lib/mock/invoice";
 import { getInvoice } from "@/lib/notion/invoice";
 

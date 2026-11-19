@@ -1,4 +1,4 @@
-import { StatusBadge } from "@/components/common/status-badge";
+import { StatusBadge } from "@/components/common/statusBadge";
 import type { Invoice } from "@/types/invoice";
 
 export function InvoiceHeader({ invoice }: { invoice: Invoice }) {

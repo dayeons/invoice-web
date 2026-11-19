@@ -1,7 +1,7 @@
 # Task 004: 견적서 조회 페이지 UI와 반응형 레이아웃 (F002, F012)
 
 ## 관련 파일
-- `src/components/features/invoice/` (items-table, skeleton, download-pdf-button, view)
+- `src/components/features/invoice/` (invoiceItemsTable, invoiceSkeleton, downloadPdfButton, invoiceView)
 - `src/app/invoice/[id]/page.tsx`, `src/app/error.tsx`, `src/app/not-found.tsx`
 
 ## 테스트 결과

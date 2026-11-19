@@ -33,7 +33,7 @@ npx tsc --noEmit     # 타입 체크 (npm 스크립트는 없음)
 ### 컴포넌트 레이어 (import 방향 고정)
 - `components/ui` (shadcn 생성물) ← `components/common` ← `components/layout` ← `components/features`
 - 상위 레이어가 하위 레이어를 import하는 것만 허용됩니다. 역방향 import는 만들지 마세요. (`common`, `features`는 필요할 때 생성)
-- `components/providers/app-providers.tsx`가 전역 Context의 유일한 진입점입니다. 새 전역 프로바이더는 여기에 추가합니다.
+- `components/providers/appProviders.tsx`가 전역 Context의 유일한 진입점입니다. 새 전역 프로바이더는 여기에 추가합니다.
 - 페이지는 서버 컴포넌트로 두고, 상호작용이 필요한 부분(PDF 다운로드 버튼 등)만 `"use client"` 컴포넌트로 분리합니다.
 
 ### 데이터 흐름

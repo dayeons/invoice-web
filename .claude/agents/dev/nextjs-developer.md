@@ -46,7 +46,7 @@ color: blue
 - 한글 폰트를 프로젝트에 포함하고 `Font.register`로 등록합니다. `Content-Disposition`은 `filename*=UTF-8''<인코딩>`을 씁니다.
 
 ### 컴포넌트 레이어 (import 방향 고정)
-`components/ui` ← `components/common` ← `components/layout` ← `components/features`. 역방향 import를 만들지 않습니다. 전역 Context는 `components/providers/app-providers.tsx`에만 추가합니다.
+`components/ui` ← `components/common` ← `components/layout` ← `components/features`. 역방향 import를 만들지 않습니다. 전역 Context는 `components/providers/appProviders.tsx`에만 추가합니다.
 
 ### shadcn (Base UI 기반)
 - `asChild`가 없습니다. 트리거 교체는 `render` prop, 링크 버튼은 `<Link className={buttonVariants()} />`를 씁니다.

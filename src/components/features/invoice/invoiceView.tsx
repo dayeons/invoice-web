@@ -1,10 +1,10 @@
 import type { Invoice } from "@/types/invoice";
 
-import { DownloadPdfButton } from "./download-pdf-button";
-import { InvoiceHeader } from "./invoice-header";
-import { InvoiceItemsTable } from "./invoice-items-table";
-import { InvoiceMeta } from "./invoice-meta";
-import { InvoiceSummary } from "./invoice-summary";
+import { DownloadPdfButton } from "./downloadPdfButton";
+import { InvoiceHeader } from "./invoiceHeader";
+import { InvoiceItemsTable } from "./invoiceItemsTable";
+import { InvoiceMeta } from "./invoiceMeta";
+import { InvoiceSummary } from "./invoiceSummary";
 
 // 견적서 본문 조합 — invoice props만으로 렌더링합니다.
 export function InvoiceView({ invoice }: { invoice: Invoice }) {

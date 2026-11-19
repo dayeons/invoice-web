@@ -54,7 +54,7 @@
 | `src/components/common/` | 도메인 무관 공통 컴포넌트 | 현재 비어 있음. 필요할 때 파일 생성 |
 | `src/components/layout/` | 레이아웃 컴포넌트 (현재 `container.tsx`) | |
 | `src/components/features/` | 도메인 컴포넌트 | 아직 없음. 견적서 컴포넌트는 `features/invoice/`에 생성 (ROADMAP Task 003) |
-| `src/components/providers/` | `app-providers.tsx`, `theme-provider.tsx` | 전역 Context는 `app-providers.tsx`에만 추가 |
+| `src/components/providers/` | `appProviders.tsx`, `themeProvider.tsx` | 전역 Context는 `appProviders.tsx`에만 추가 |
 | `docs/` | `PRD.md`, `ROADMAP.md` | 7절 연동 규칙 적용 |
 | `tasks/` | 작업 파일 (`XXX-description.md`) | 아직 없음. 첫 작업 시 `tasks/000-sample.md`와 함께 생성 |
 
@@ -63,7 +63,7 @@
 `components/ui` ← `components/common` ← `components/layout` ← `components/features`
 
 - 오른쪽이 왼쪽을 import하는 것만 허용한다.
-- ✅ `features/invoice/invoice-header.tsx`가 `@/components/ui/badge`를 import
+- ✅ `features/invoice/invoiceHeader.tsx`가 `@/components/ui/badge`를 import
 - ❌ `components/ui/*` 또는 `components/layout/*`가 `components/features/*`를 import
 
 ## 3. 코드 표준
@@ -81,7 +81,7 @@
 - import 순서: 외부 패키지 → 빈 줄 → `@/` 별칭 → 빈 줄 → 상대 경로
 - 도메인 타입은 `type`으로 선언 (`interface` 사용 안 함)
 - 새 파일의 `cn`은 `@/lib/utils`에서 import한다. `components/ui/*` 생성물이 `"cn"`을 직접 import하는 것은 그대로 둔다.
-- 파일명은 kebab-case (`app-providers.tsx`, `theme-provider.tsx`)
+- 파일명은 components 하위는 camelCase (`appProviders.tsx`, `themeProvider.tsx`), ui/ 는 shadcn 규칙 유지
 
 ### 3.3 날짜·금액 표시
 
@@ -176,7 +176,7 @@ Next.js 코드를 쓰기 전에 설치된 문서를 먼저 읽는다. 기준 경
 
 | 대상 | 규칙 |
 | --- | --- |
-| 전역 Context | `components/providers/app-providers.tsx`에만 추가 (현재: `ThemeProvider`, `TooltipProvider`, `Toaster`) |
+| 전역 Context | `components/providers/appProviders.tsx`에만 추가 (현재: `ThemeProvider`, `TooltipProvider`, `Toaster`) |
 | 테마 | `next-themes`, `attribute="class"`. 색은 `globals.css`의 토큰 변수만 사용 (하드코딩 색상 금지) |
 | 아이콘 | `lucide-react` |
 | 토스트 | `sonner` (`Toaster`는 이미 등록됨. 중복 등록 금지) |
@@ -282,7 +282,7 @@ GET /invoice/[id]
 - 노션 컬럼명 문자열을 `properties.ts` 밖에 쓰지 않는다.
   - ❌ `readText(properties, "견적서 번호")`
   - ✅ `readText(properties, INVOICE_PROPS.number)`
-- 새 전역 Provider를 `layout.tsx`에 직접 감싸지 않는다. `app-providers.tsx`에 추가한다.
+- 새 전역 Provider를 `layout.tsx`에 직접 감싸지 않는다. `appProviders.tsx`에 추가한다.
 - 도메인·사이트 이름을 `siteConfig` 밖에 하드코딩하지 않는다.
 
 ### Cache Components
