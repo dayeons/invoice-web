@@ -41,6 +41,7 @@
 | `src/app/layout.tsx` | `<html>`, Geist 폰트, `AppProviders`, 전역 `metadata` | 헤더/푸터/공통 셸 추가 금지 |
 | `src/app/page.tsx` | `/` 안내 문구 | 견적서 목록·검색 추가 금지 |
 | `src/app/invoice/[id]/page.tsx` | 견적서 조회 페이지 | 서버 컴포넌트 유지. 상호작용만 `"use client"` 분리 |
+| `src/app/api/revalidate/route.ts` | 견적서 캐시 즉시 재검증 (`POST`, Bearer `REVALIDATE_SECRET`, 본문 `{id}`) | 토큰은 `crypto.timingSafeEqual`로 비교, 노션 호출 금지, 응답과 로그에 토큰 금지 |
 | `src/app/not-found.tsx` | 404 안내 (F011) | `notFound()` 호출 결과가 여기로 온다 |
 | `src/app/error.tsx` | 런타임 에러 경계 (`"use client"`) | 노션 원문 오류, API 키를 화면에 출력 금지 |
 | `src/lib/notion/client.ts` | 노션 클라이언트 싱글턴, `requireEnv` | **서버 전용** |
@@ -58,7 +59,7 @@
 | `src/components/features/` | 도메인 컴포넌트 | 견적서 컴포넌트는 `features/invoice/`에 있음 |
 | `src/components/providers/` | `appProviders.tsx`, `themeProvider.tsx` | 전역 Context는 `appProviders.tsx`에만 추가 |
 | `docs/` | `PRD.md`, `ROADMAP.md` | 7절 연동 규칙 적용 |
-| `tasks/` | 작업 파일 (`XXX-description.md`) | `000-sample.md` 템플릿과 `003`~`007` 작업 파일이 있음 |
+| `tasks/` | 작업 파일 (`XXX-description.md`) | `000-sample.md` 템플릿과 `003`~`008` 작업 파일이 있음 |
 
 ### 2.2 컴포넌트 import 방향 (고정)
 
