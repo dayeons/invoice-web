@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright MCP 출력(스크린샷, 다운로드, 임시 빌드 산출물). gitignore 대상이며 검사할 소스가 아님
+    ".playwright-mcp/**",
   ]),
 ]);
 

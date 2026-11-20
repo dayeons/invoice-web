@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check-all": "npm run lint && tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
