@@ -57,35 +57,35 @@
 - [x] `.env.example`, `CLAUDE.md`, `README.md` 환경변수 문서
 - [x] 임시 스크립트로 우선순위, 끝 슬래시, ID 정규화 확인, `lint`, `tsc --noEmit`
 - [x] `npm run build`로 `generateMetadata`와 Cache Components 충돌 여부 확인 (2026-11-20 통과, 대안 불필요)
-- [ ] 노션 Invoices DB Formula "공유 링크" 가이드와 README 작성자용 절차 작성
+- [x] 노션 Invoices DB Formula "공유 링크" 가이드와 README 작성자용 절차 작성 (README "견적서 작성자 가이드" 절)
 - [x] PDF 문서 내 링크 표기에 `getInvoiceUrl` 연결 (Task 006 T6에서 구현, 링크 값 검증은 Task 007 체크리스트에서)
-- [ ] Playwright MCP 테스트 수행과 결과 기록, ROADMAP/문서 상태 갱신
+- [ ] Playwright MCP 테스트 수행과 결과 기록, ROADMAP/문서 상태 갱신 (결과 기록 완료, 미충족 2건이 남아 ROADMAP 완료 표시는 보류)
 
 ## 테스트 체크리스트
 (Playwright MCP로 수행. 환경변수 시나리오는 값을 바꿔 서버를 다시 띄움. 메타데이터 링크는 `link[rel=canonical]`의 `href`로 확인)
 
 ### 정상 케이스
-- [ ] 노션 Formula로 만든 링크(하이픈 없는 ID)를 새 브라우저 컨텍스트에서 열기 → 로그인 없이 견적서 정상 표시
-- [ ] 공유 링크로 연 견적서의 번호와 총액이 노션 원본과 일치하고, 페이지 메타데이터(canonical)가 접속한 URL과 같음 (PDF 내 링크 표기는 PDF 연결 후 확인)
-- [ ] `NEXT_PUBLIC_SITE_URL` 미설정 → canonical이 `http://localhost:3000/invoice/<ID>`
-- [ ] `NEXT_PUBLIC_SITE_URL`을 임의 도메인으로 설정 후 재시작 → canonical이 해당 도메인으로 바뀜
-- [ ] 페이지 메타데이터에 `robots`가 `noindex, nofollow`로 유지됨
+- [ ] 노션 Formula로 만든 링크(하이픈 없는 ID)를 새 브라우저 컨텍스트에서 열기 → 로그인 없이 견적서 정상 표시 (Formula 컬럼은 사용자가 추가하는 작업이라 미확인. 같은 형식의 링크는 새 컨텍스트에서 통과, 아래 결과 참조)
+- [x] 공유 링크로 연 견적서의 번호와 총액이 노션 원본과 일치하고, 페이지 메타데이터(canonical)가 접속한 URL과 같음 (PDF 내 링크 표기는 PDF 연결 후 확인)
+- [x] `NEXT_PUBLIC_SITE_URL` 미설정 → canonical이 `http://localhost:3000/invoice/<ID>`
+- [x] `NEXT_PUBLIC_SITE_URL`을 임의 도메인으로 설정 후 재시작 → canonical이 해당 도메인으로 바뀜
+- [x] 페이지 메타데이터에 `robots`가 `noindex, nofollow`로 유지됨
 
 ### 에러/예외 케이스
-- [ ] 공유 링크의 ID 일부를 지운 URL 접속 → HTTP 404 + 404 안내 페이지 (`proxy.ts`, canonical 없음)
-- [ ] 형식은 맞지만 없는 ID → 404 화면 + noindex, 콘솔 에러 0
-- [ ] `getInvoiceUrl("abc")`처럼 잘못된 ID → 예외 (임시 스크립트로 확인함, 화면에서는 호출되지 않음)
+- [x] 공유 링크의 ID 일부를 지운 URL 접속 → HTTP 404 + 404 안내 페이지 (`proxy.ts`, canonical 없음)
+- [x] 형식은 맞지만 없는 ID → 404 화면 + noindex, 콘솔 에러 0
+- [x] `getInvoiceUrl("abc")`처럼 잘못된 ID → 예외 (임시 스크립트로 확인함, 화면에서는 호출되지 않음)
 - [ ] 프리뷰/운영: Vercel 배포 URL 대체 규칙은 Task 010의 프리뷰 배포에서 확인
 
 ### 경계값/엣지 케이스
-- [ ] `NEXT_PUBLIC_SITE_URL` 끝에 `/`가 있어도 링크에 `//invoice`가 생기지 않음
-- [ ] 하이픈 포함 ID와 대문자 ID로 접속해도 canonical은 하이픈 없는 32자리 소문자, 같은 견적서가 열림
-- [ ] `NEXT_PUBLIC_SITE_URL`에 프로토콜이 없는 값을 넣어도 `https://`가 보충됨
-- [ ] `build`가 `generateMetadata`의 `params` 사용으로 실패하지 않음 (Cache Components)
+- [x] `NEXT_PUBLIC_SITE_URL` 끝에 `/`가 있어도 링크에 `//invoice`가 생기지 않음
+- [x] 하이픈 포함 ID와 대문자 ID로 접속해도 canonical은 하이픈 없는 32자리 소문자, 같은 견적서가 열림
+- [x] `NEXT_PUBLIC_SITE_URL`에 프로토콜이 없는 값을 넣어도 `https://`가 보충됨
+- [x] `build`가 `generateMetadata`의 `params` 사용으로 실패하지 않음 (Cache Components)
 
 ### 반응형
-- [ ] 375px 브라우저에서 공유 링크로 열었을 때 견적서와 PDF 버튼 정상 표시, 가로 스크롤 없음
-- [ ] 768px, 1280px에서도 동일
+- [x] 375px 브라우저에서 공유 링크로 열었을 때 견적서와 PDF 버튼 정상 표시, 가로 스크롤 없음
+- [x] 768px, 1280px에서도 동일
 
 ## 테스트 결과
 
@@ -117,3 +117,32 @@
 - `npm run build` 통과: `/invoice/[id]`는 `◐ (Partial Prerender)`로 표시되고 `generateMetadata`의 `params` 사용으로 인한 Cache Components 오류가 없음 → 대안 1, 2 불필요.
 - PDF 하단에 `견적서 링크: <getInvoiceUrl(invoice.id)>`(클릭 가능한 링크) 표기 구현. `[TEST] 정상` PDF에서 `http://localhost:3000/invoice/41d6a564a299816c8eb5ecb02e648af7`이 하이픈 없는 32자리 소문자로 나옴을 Read로 확인. 접속 URL과의 일치, 환경변수별 값은 체크리스트에서 검증.
 
+### 2026-11-20 Playwright MCP 시나리오 검증 (Task 007 T9)
+방법: 개발 서버(3000번)에 새 격리 브라우저 컨텍스트로 접속했습니다. 환경변수 시나리오는 프로젝트를 복사한 별도 디렉터리(3100번 포트)에서 값을 바꿔 서버를 다시 띄워 확인했고, 확인 뒤 복사본은 삭제했습니다. 대상은 `[TEST] 정상`(ID `41d6a564a299816c8eb5ecb02e648af7`)입니다.
+
+| 확인 | 입력 | 결과 |
+| --- | --- | --- |
+| 공유 링크 열기 | 하이픈 없는 32자리, 새 컨텍스트(로그인 없음) | HTTP 200, 번호 `[TEST] 정상`, 총액 ₩2,490,000(노션 값과 일치), 콘솔 에러 0 |
+| canonical | 위 접속 URL | `http://localhost:3000/invoice/41d6...af7`로 접속 URL과 같음. PDF 하단 링크도 같은 값(Task 006 PDF 검증 기록) |
+| robots | 견적서 페이지 | `noindex, nofollow` |
+| ID 변형 | 하이픈 포함, 대문자, 대문자+하이픈 | 모두 같은 견적서 표시, canonical은 하이픈 없는 소문자 |
+| ID 일부 삭제 | 20자리로 자른 ID | HTTP 404, 404 안내 문구, `noindex`, canonical 없음 (콘솔의 404 리소스 메시지는 문서 응답 자체의 상태 로그) |
+| 없는 ID | `00000000000000000000000000000000` | 404 안내 문구, `noindex, nofollow`, 콘솔 에러 0 (dev 서버 로그가 콘솔에 경고 1건으로 전달됨, 노션 `object_not_found`) |
+| 환경변수 미설정 | 3100번 포트에서 접속 | canonical은 `http://localhost:3000/...` (기본값) |
+| 환경변수 설정 | `https://example.test` | `https://example.test/invoice/<ID>` |
+| 끝 슬래시 | `https://example.test/` | `https://example.test/invoice/<ID>` (`//invoice` 없음) |
+| 프로토콜 없음 | `example.test` | `https://example.test/invoice/<ID>` |
+| 빌드 | `npm run build` | 통과 (`/invoice/[id]`는 Partial Prerender, `generateMetadata`의 `params` 사용 오류 없음) |
+| 반응형 | 375/768/1280px | `scrollWidth`와 `clientWidth` 동일(가로 스크롤 없음), PDF 버튼 표시, 총액 표시 |
+
+재빌드 필요 여부 (운영 빌드, 복사본)
+- 빌드할 때 `NEXT_PUBLIC_SITE_URL`이 없었고 `next start`에서 값을 주면 그 값이 canonical에 반영됨
+- 빌드할 때 값을 주었다면 `next start`에서 값을 주지 않아도 빌드 때의 값이 유지됨(빌드 때 코드에 반영됨)
+- 결론: 값을 바꾸면 다시 빌드해야 안전합니다. README에도 같은 주의를 적었습니다.
+
+미충족 항목
+- 노션 Formula로 만든 링크 확인: 사용자가 Invoices DB에 `공유 링크` Formula 컬럼을 추가한 뒤, 그 컬럼에서 복사한 링크로 새 컨텍스트에서 열어 확인해야 합니다. README 절차를 그대로 따라 링크가 만들어지는지도 이때 함께 확인합니다.
+- Vercel 배포 URL 대체 규칙: Task 010 프리뷰 배포에서 확인합니다.
+
+참고
+- 없는 ID(형식은 맞음)의 페이지에도 canonical이 들어갑니다(노션을 호출하지 않는 메타데이터 방식의 결과). `noindex`라 색인에는 영향이 없어 변경하지 않았습니다.
