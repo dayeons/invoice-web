@@ -10,6 +10,7 @@ import type { Invoice, InvoiceItem } from "@/types/invoice"
 
 import { getDatabaseId, getNotionClient } from "./client"
 import { NOTION_ID_PATTERN, normalizeNotionId } from "./id"
+import { logNotionError } from "./logError"
 import {
   INVOICE_PROPS,
   ITEM_PROPS,
@@ -137,6 +138,10 @@ export async function getInvoice(pageId: string): Promise<Invoice | null> {
   } catch (error) {
     if (isNotFoundError(error)) return null
     // 인증 오류, 속도 제한 등은 404가 아니라 error.tsx로 보냅니다.
-    throw error
+    // 서버 로그에는 오류 코드와 요청 ID만 남깁니다(견적서 내용과 API 키는 남기지 않음).
+    // 원본 오류를 그대로 던지면 Next가 헤더와 응답 본문까지 통째로 로그에 찍으므로,
+    // 내용이 없는 새 오류를 던집니다(cause도 붙이지 않음). 호출하는 쪽은 오류 종류를 구분하지 않습니다.
+    logNotionError(error, "getInvoice")
+    throw new Error("노션에서 견적서를 불러오지 못했습니다.")
   }
 }
