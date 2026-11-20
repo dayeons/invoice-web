@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { ThemeToggle } from "@/components/common/themeToggle";
 import { Container } from "@/components/layout/container";
 import { InvoiceSkeleton } from "@/components/features/invoice/invoiceSkeleton";
 import { InvoiceView } from "@/components/features/invoice/invoiceView";
@@ -31,6 +32,9 @@ export default function InvoicePage({ params }: PageProps<"/invoice/[id]">) {
   return (
     <main className="py-8 sm:py-12">
       <Container className="max-w-3xl">
+        <div className="mb-6 flex justify-end print:hidden">
+          <ThemeToggle />
+        </div>
         <Suspense fallback={<InvoiceSkeleton />}>
           <InvoiceContent params={params} />
         </Suspense>
