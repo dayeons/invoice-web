@@ -19,7 +19,7 @@
 | UI | shadcn `base-nova` (`@base-ui/react`) | Radix 아님. `asChild` 없음 |
 | 노션 | `@notionhq/client` 5.31.x | `data_source_id` parent까지 처리 |
 | 유틸 | date-fns 4(ko), `Intl`, sonner, next-themes, lucide-react | |
-| PDF | 미설치 | `@react-pdf/renderer` 도입 예정 (ROADMAP Task 006) |
+| PDF | `@react-pdf/renderer` 4.9.0 | 한글 폰트 `src/assets/fonts/`(OTF), 등록은 `src/lib/pdf/fonts.ts` (ROADMAP Task 006) |
 
 ### 1.2 문서 우선순위 (충돌 시 위가 이긴다)
 
@@ -46,17 +46,19 @@
 | `src/lib/notion/client.ts` | 노션 클라이언트 싱글턴, `requireEnv` | **서버 전용** |
 | `src/lib/notion/properties.ts` | 노션 컬럼명 상수 `INVOICE_PROPS`, `ITEM_PROPS`와 값 추출 헬퍼 | 컬럼명 문자열은 이 파일에만 둔다 |
 | `src/lib/notion/invoice.ts` | `getInvoice`, `invoiceCacheTag` | 4.1절 불변 조건 유지 |
+| `src/lib/notion/id.ts` | `NOTION_ID_PATTERN`, `isNotionId`, `normalizeNotionId` | 서버 전용 모듈을 import하지 않는 순수 모듈 (Proxy와 공유) |
+| `src/proxy.ts` | `/invoice/:id` ID 형식 오류를 HTTP 404로 처리 | 노션 호출 금지 |
 | `src/types/invoice.ts` | `Invoice`, `InvoiceItem` | 화면과 PDF가 공유하는 정규화 타입 |
 | `src/lib/format.ts` | `formatDate`, `formatRelative`, `formatNumber`, `formatCurrency` | 날짜/금액 표시는 여기 함수만 사용 |
 | `src/lib/utils.ts` | `cn` (`"cn"` 패키지 재export) | |
 | `src/config/site.ts` | `siteConfig` (이름, 설명, URL) | 전역 메타데이터의 유일한 위치 |
 | `src/components/ui/` | shadcn 생성물 | **수동 수정 금지.** 추가는 `npx shadcn@latest add <name>` |
-| `src/components/common/` | 도메인 무관 공통 컴포넌트 | 현재 비어 있음. 필요할 때 파일 생성 |
+| `src/components/common/` | 도메인 무관 공통 컴포넌트 | 현재 `statusBadge.tsx`. 필요할 때 파일 생성 |
 | `src/components/layout/` | 레이아웃 컴포넌트 (현재 `container.tsx`) | |
-| `src/components/features/` | 도메인 컴포넌트 | 아직 없음. 견적서 컴포넌트는 `features/invoice/`에 생성 (ROADMAP Task 003) |
+| `src/components/features/` | 도메인 컴포넌트 | 견적서 컴포넌트는 `features/invoice/`에 있음 |
 | `src/components/providers/` | `appProviders.tsx`, `themeProvider.tsx` | 전역 Context는 `appProviders.tsx`에만 추가 |
 | `docs/` | `PRD.md`, `ROADMAP.md` | 7절 연동 규칙 적용 |
-| `tasks/` | 작업 파일 (`XXX-description.md`) | 아직 없음. 첫 작업 시 `tasks/000-sample.md`와 함께 생성 |
+| `tasks/` | 작업 파일 (`XXX-description.md`) | `000-sample.md` 템플릿과 `003`~`007` 작업 파일이 있음 |
 
 ### 2.2 컴포넌트 import 방향 (고정)
 
@@ -102,14 +104,15 @@
 3. `isFullPage(page)` 확인과 `page.in_trash` 제외
 4. `belongsToInvoiceDatabase(page)`로 지정한 DB 소속 확인. 다른 DB 페이지는 `null`
 5. 관계(항목)가 `RELATION_INLINE_LIMIT`(25)개에 도달하면 `pages.properties.retrieve`로 전부 조회
-6. 총 금액 컬럼이 비면 항목 금액 합계로 대체
+6. 총 금액 컬럼(노션 롤업, 숫자 컬럼도 읽음)이 비면 항목 금액 합계로 대체
 7. `invoiceCacheTag` 형식은 `invoice-<하이픈 없는 소문자 32자리>`. 바꾸면 재검증 코드와 함께 바꾼다.
 
 ### 4.2 오류 분기
 
 | 상황 | 처리 | 결과 화면 |
 | --- | --- | --- |
-| ID 형식 오류, 휴지통, 다른 DB, `ObjectNotFound`, `ValidationError` | `null` 반환 → 페이지에서 `notFound()` | `not-found.tsx` (404) |
+| ID 형식 오류 | `src/proxy.ts`가 먼저 처리 | `not-found.tsx` (HTTP 404) |
+| 휴지통, 다른 DB, `ObjectNotFound`, `ValidationError` | `null` 반환 → 페이지에서 `notFound()` | `not-found.tsx` (404 화면 + noindex, HTTP 200) |
 | 인증 오류, 속도 제한, 환경변수 누락, 그 외 | **`throw` 유지** | `error.tsx` |
 
 - ❌ `catch { return null }` 로 모든 오류를 404로 숨기기
@@ -120,7 +123,7 @@
 - `src/lib/notion/*`는 클라이언트 컴포넌트(`"use client"`)에서 import하지 않는다.
 - 노션 값(`NOTION_API_KEY`, `NOTION_DATABASE_ID`)에 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 - 노션 호출은 서버 컴포넌트, `"use cache"` 함수, Route Handler 안에서만 한다.
-- 새 노션 호출을 추가할 때 `Promise.all`로 무제한 병렬 호출하지 않는다. 노션 API는 평균 초당 3회 제한이다. (현재 `getInvoice`의 항목 조회는 `Promise.all`이며 ROADMAP Task 005에서 묶음 처리로 바꿀 예정이다.)
+- 새 노션 호출을 추가할 때 `Promise.all`로 무제한 병렬 호출하지 않는다. 노션 API는 평균 초당 3회 제한이다. (`getInvoice`의 항목 조회는 `fetchItemsInBatches`로 3개씩 묶음 조회한다. SDK는 429를 기본 2회 자동 재시도하므로 실패가 지연으로만 보일 수 있다.)
 
 ### 4.4 견적서 페이지 (`src/app/invoice/[id]/page.tsx`)
 
@@ -128,9 +131,10 @@
 - 타입은 전역 헬퍼 `PageProps<"/invoice/[id]">`, `LayoutProps<"/">`를 쓴다. 직접 `{ params: { id: string } }`로 쓰지 않는다.
 - `export const metadata`의 `robots: { index: false, follow: false }`를 지운다 ❌ / 유지한다 ✅
 - `getInvoice` 결과가 `null`이면 `notFound()`를 호출한다.
-- 현재 본문은 연동 확인용 임시 출력이다 (ROADMAP Task 003~004에서 교체).
+- 페이지는 형식을 먼저 `isNotionId`로 검사한 뒤 `normalizeNotionId`(하이픈 제거 + 소문자)로 맞춘 ID로 `getInvoice`를 호출한다. 노션 API는 대문자 ID를 거부한다.
+- ID 형식 오류는 `src/proxy.ts`가 HTTP 404로 먼저 처리한다. 형식은 맞지만 없는 ID, 휴지통, 다른 DB는 페이지의 `notFound()`로 404 화면 + noindex(HTTP 200)이다.
 
-### 4.5 PDF 다운로드 (F003, 미구현)
+### 4.5 PDF 다운로드 (F003, 구현 완료)
 
 - 구현 위치: Route Handler `src/app/invoice/[id]/pdf/route.ts` (`GET`)
 - **요청에서 견적서 데이터를 받지 않는다.** ID만 받아 서버에서 `getInvoice(id)`로 다시 조회한다. 없으면 404 응답.
@@ -139,10 +143,10 @@
 - 다운로드 버튼만 `"use client"` 컴포넌트로 분리하고, 생성 중 비활성화 + 스피너, 실패 시 `sonner` 토스트를 쓴다.
 - PDF 라이브러리는 `@react-pdf/renderer`로 한다. Puppeteer는 ROADMAP에서 제외되었다.
 
-### 4.6 사이트 URL (F010, 미구현)
+### 4.6 사이트 URL (F010, 환경변수화와 `getInvoiceUrl` 구현)
 
-- `siteConfig.url`은 현재 `http://localhost:3000` 고정이다. 도메인을 다른 파일에 하드코딩하지 않는다.
-- 변경 시 ROADMAP Task 007에 따라 `NEXT_PUBLIC_SITE_URL` → Vercel URL → localhost 순으로 대체한다. 이 값만 `NEXT_PUBLIC_` 접두사를 허용한다.
+- `siteConfig.url`(`src/config/site.ts`)은 `NEXT_PUBLIC_SITE_URL` → Vercel 환경별 URL(운영 `VERCEL_PROJECT_PRODUCTION_URL`, 프리뷰 `VERCEL_URL`) → `http://localhost:3000` 순으로 정한다. 도메인을 다른 파일에 하드코딩하지 않는다. 이 값만 `NEXT_PUBLIC_` 접두사를 허용한다.
+- 견적서 링크는 `getInvoiceUrl(pageId)`(`src/lib/invoice-url.ts`)로만 만든다. 하이픈 없는 32자리 소문자로 정규화하고, 형식이 잘못되면 예외를 던진다. PDF 문서 하단의 링크 표기도 이 함수를 쓴다(연결 완료).
 
 ## 5. 프레임워크·라이브러리 사용 표준
 
@@ -191,7 +195,7 @@ Next.js 코드를 쓰기 전에 설치된 문서를 먼저 읽는다. 기준 경
 ```
 GET /invoice/[id]
   → page.tsx : <Suspense> 안에서 await params
-  → getInvoice(id)  ["use cache", 5분, tag=invoice-<id>]
+  → getInvoice(id)  ["use cache", 서버 재검증 1분(stale 5분, 만료 1시간), tag=invoice-<id>]
       → ID 형식 검증 → pages.retrieve → 휴지통/DB 소속 검사
       → 항목 관계 ID 수집(25개 이상이면 속성 API) → 항목 페이지 조회
       → Invoice 로 정규화 (properties.ts 헬퍼)
@@ -240,8 +244,7 @@ GET /invoice/[id]
 | 훅·MCP 설정 변경 | `.claude/settings.json` / `.mcp.json`. 이 문서 5절의 도구 설명과 어긋나면 갱신 |
 
 **이미 낡은 문장 (해당 작업을 할 때 같이 고친다)**
-- `CLAUDE.md`: "노션 조회 계층(F001)과 PDF 생성(F003)은 아직 구현 전" → 조회 계층은 이미 구현되어 있다. (ROADMAP Task 005 완료 시 수정하기로 되어 있다.)
-- `README.md`: "예정: 노션 조회(F001)", "예정: @notionhq/client" → `@notionhq/client`는 설치되어 있고 조회 계층 코드가 있다.
+- 현재 알려진 낡은 문장은 없다. (Task 005 완료 시 `CLAUDE.md`, `README.md`의 노션 검증 문구를 갱신했다.)
 
 ## 8. AI 의사결정 표준
 
@@ -258,8 +261,7 @@ GET /invoice/[id]
 | 상황 | 이유 |
 | --- | --- |
 | `formatCurrency` 표기 변경 | 실제 출력은 `₩1,500,000`인데 ROADMAP 테스트 예시는 `1,500,000원`이다. 둘 중 무엇이 의도인지 모른다. |
-| `.env.example` 커밋 | `.gitignore`의 `.env*`에 걸려 git에 추적되지 않는다. 커밋하려면 `git add -f` 또는 `.gitignore` 수정이 필요하다. |
-| `shrimp_data/`, `.mcp.json` 커밋 | `shrimp_data/`는 untracked(무시 규칙 없음)이고 `.mcp.json`은 로컬 절대경로를 포함한다. |
+| `.mcp.json` 커밋 | `.mcp.json`은 로컬 절대경로를 포함한다. (`shrimp_data/`와 `.env.example` 예외는 `.gitignore`에 반영되어 있다.) |
 | ROADMAP에 없는 의존성 추가 | 계획된 것은 `@react-pdf/renderer`뿐이다. |
 | MVP 범위 밖 기능 (관리자 대시보드, 상태 변경, 이메일 발송, 로그인, 다국어, 템플릿, 버전 관리, 만료 처리) | PRD 3절·ROADMAP "범위 밖"에 제외로 명시되어 있다. |
 | 노션 `상태` 값으로 접근 제어나 상태 변경 | MVP에서는 배지 표시만 한다. |
