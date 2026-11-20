@@ -9,6 +9,7 @@ import { cacheLife, cacheTag } from "next/cache"
 import type { Invoice, InvoiceItem } from "@/types/invoice"
 
 import { getDatabaseId, getNotionClient } from "./client"
+import { NOTION_ID_PATTERN, normalizeNotionId } from "./id"
 import {
   INVOICE_PROPS,
   ITEM_PROPS,
@@ -19,16 +20,14 @@ import {
   readText,
 } from "./properties"
 
-// 노션 페이지 ID: 하이픈 없는 32자리 hex 또는 UUID 형식
-const NOTION_ID_PATTERN = /^[0-9a-f]{32}$|^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
-
 // 페이지 조회 응답에 인라인으로 포함되는 관계 항목의 최대 개수 (이 이상이면 잘렸을 수 있음)
 const RELATION_INLINE_LIMIT = 25
 
-const normalizeId = (id: string) => id.replaceAll("-", "").toLowerCase()
+// 항목 페이지를 한 번에 동시 조회하는 최대 개수 (노션 API 평균 초당 3회 제한 고려)
+const ITEM_FETCH_BATCH_SIZE = 3
 
 export function invoiceCacheTag(pageId: string) {
-  return `invoice-${normalizeId(pageId)}`
+  return `invoice-${normalizeNotionId(pageId)}`
 }
 
 // 페이지가 지정한 견적서 데이터베이스에 속하는지 확인합니다.
@@ -36,7 +35,7 @@ export function invoiceCacheTag(pageId: string) {
 function belongsToInvoiceDatabase(page: PageObjectResponse) {
   const { parent } = page
   if (parent.type !== "database_id" && parent.type !== "data_source_id") return false
-  return normalizeId(parent.database_id) === normalizeId(getDatabaseId())
+  return normalizeNotionId(parent.database_id) === normalizeNotionId(getDatabaseId())
 }
 
 // 노션이 "없음/잘못된 ID/접근 불가"로 응답하는 경우 → 404로 처리합니다.
@@ -87,8 +86,23 @@ async function fetchItem(itemId: string): Promise<InvoiceItem | null> {
   }
 }
 
+// 항목 페이지를 ITEM_FETCH_BATCH_SIZE개씩 묶어 순차 조회합니다.
+// 묶음 안에서만 병렬로 호출해 항목이 많아도 동시 요청 수가 묶음 크기를 넘지 않습니다. 결과 순서는 itemIds 순서와 같습니다.
+async function fetchItemsInBatches(itemIds: string[]): Promise<InvoiceItem[]> {
+  const items: InvoiceItem[] = []
+  for (let start = 0; start < itemIds.length; start += ITEM_FETCH_BATCH_SIZE) {
+    const batch = itemIds.slice(start, start + ITEM_FETCH_BATCH_SIZE)
+    const fetched = await Promise.all(batch.map(fetchItem))
+    for (const item of fetched) {
+      if (item) items.push(item)
+    }
+  }
+  return items
+}
+
 // 노션 페이지 ID로 견적서 1건을 조회합니다. 없거나 접근할 수 없으면 null을 돌려줍니다. (F001, F011)
-// 노션 API 호출을 줄이기 위해 5분 단위로 캐시하고, 필요하면 revalidateTag로 즉시 무효화합니다.
+// 노션 API 호출을 줄이기 위해 서버에서 1분 단위로 재검증합니다.
+// (cacheLife("minutes"): stale 5분, revalidate 1분, expire 1시간) 필요하면 revalidateTag로 즉시 무효화합니다.
 export async function getInvoice(pageId: string): Promise<Invoice | null> {
   "use cache"
   cacheLife("minutes")
@@ -104,8 +118,7 @@ export async function getInvoice(pageId: string): Promise<Invoice | null> {
     if (!belongsToInvoiceDatabase(page)) return null
 
     const itemIds = await fetchItemIds(page)
-    const fetched = await Promise.all(itemIds.map(fetchItem))
-    const items = fetched.filter((item): item is InvoiceItem => item !== null)
+    const items = await fetchItemsInBatches(itemIds)
 
     const { properties } = page
     return {

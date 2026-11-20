@@ -34,3 +34,10 @@ Playwright(playwright-core + Chromium)로 수행했습니다.
   - 판단: "주요 영역 위치가 크게 어긋나지 않음"은 헤더, 메타, 항목 시작점 기준으로 충족합니다. 필요하면 스켈레톤에 버튼 자리를 추가하는 개선을 별도로 검토할 수 있습니다.
 - 결정(사용자): `/invoice/abc`의 HTTP 상태 코드 200 문제는 Task 005(노션 실데이터 연동 시점)에서 함께 판단합니다. 그때까지 Task 004는 ✅를 표시하지 않습니다.
 - 결론: 남은 것은 404 응답 상태 한 건뿐입니다.
+
+### 2026-11-19 마지막 미충족 항목 해소 (Task 005에서 처리)
+- 실패 1(`/invoice/abc` HTTP 200)은 `src/proxy.ts`(matcher `/invoice/:id`)가 ID 형식 오류를 존재하지 않는 경로로 rewrite해 HTTP 404 + 404 화면으로 처리하도록 바꿔 해소했습니다. 운영 빌드(`build` 후 `start`)에서 `/invoice/abc`, 31자리 ID, `/invoice/demo` 모두 HTTP 404, noindex, 404 화면이며, 잘못된 API 키로 띄운 서버에서도 404라 노션을 호출하지 않음을 확인했습니다. 상세 기록은 tasks/005-notion-integration.md.
+- 형식은 맞지만 없는 ID, 휴지통, 다른 DB는 Cache Components 구조상 HTTP 200 + noindex + 404 화면이며, 이는 의도된 동작으로 로드맵 기대값을 수정했습니다.
+- 개발 환경 `demo` 분기는 Task 005에서 제거했습니다(`/invoice/demo`는 404).
+- 이로써 Task 004 체크리스트 전 항목이 통과했습니다.
+
