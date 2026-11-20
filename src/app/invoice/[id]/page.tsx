@@ -58,6 +58,9 @@ async function InvoiceContent({
   const invoice = await getInvoice(normalizeNotionId(id));
   if (!invoice) notFound();
 
-  // PDF 다운로드 버튼은 InvoiceView에 포함되어 있습니다.
-  return <InvoiceView invoice={invoice} />;
+  // PDF 다운로드와 링크 복사 버튼은 InvoiceView에 포함되어 있습니다.
+  // 공유 링크는 서버에서 완성해 넘깁니다. (클라이언트에서는 Vercel 배포 URL을 읽을 수 없음)
+  return (
+    <InvoiceView invoice={invoice} shareUrl={getInvoiceUrl(invoice.id)} />
+  );
 }
