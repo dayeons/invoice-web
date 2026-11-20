@@ -15,7 +15,7 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
       <InvoiceItemsTable invoice={invoice} />
       <InvoiceSummary invoice={invoice} />
       <div className="flex justify-end print:hidden">
-        <DownloadPdfButton />
+        <DownloadPdfButton invoiceId={invoice.id} />
       </div>
     </article>
   );
