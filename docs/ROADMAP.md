@@ -21,9 +21,9 @@
 
 | 영역 | 상태 | 위치 |
 | --- | --- | --- |
-| 견적서 조회(F002), 노션 연동(F001), 404(F011), 반응형(F012) | 완료 (Task 003, 005 ✅. Task 004는 아래 "✅ 보류" 참조) | `src/app/invoice/[id]/`, `src/lib/notion/`, `src/components/features/invoice/` |
+| 견적서 조회(F002), 노션 연동(F001), 404(F011), 반응형(F012) | 완료 (Task 003, 004, 005 ✅) | `src/app/invoice/[id]/`, `src/lib/notion/`, `src/components/features/invoice/` |
 | PDF 다운로드(F003) | 완료 (Task 006) | `src/app/invoice/[id]/pdf/route.ts`, `src/lib/pdf/` |
-| 공유 URL(F010) | 일부 구현: `getInvoiceUrl`, canonical 완료. README 작성자 절차와 노션 Formula 가이드는 Task 007에 남음 | `src/lib/invoice-url.ts`, `src/config/site.ts` |
+| 공유 URL(F010) | 완료 (Task 007): `getInvoiceUrl`, canonical, README 작성자 절차와 노션 Formula 가이드 | `src/lib/invoice-url.ts`, `src/config/site.ts` |
 | 다크모드 토글 | 완료 (Task 010) | `src/components/common/themeToggle.tsx` |
 | 링크 복사 | 완료 (Task 011) | `src/components/features/invoice/copyLinkButton.tsx` |
 | 관리자 화면 | 없음 (보류) | - |
@@ -52,17 +52,18 @@
 - **Task 003: 견적서 표시 컴포넌트와 더미 데이터** ✅ - 완료 (See: /tasks/003-invoice-components.md)
 - **Task 005: 노션 연동 계층 실데이터 검증과 페이지 연결 (F001, F011)** ✅ - 완료 (See: /tasks/005-notion-integration.md)
 - **Task 006: PDF 생성과 다운로드 (F003)** ✅ - 완료 (See: /tasks/006-invoice-pdf.md). 한계: 실제 iOS/안드로이드 기기 다운로드는 뷰포트 에뮬레이션까지만 확인, Vercel 함수의 폰트 포함은 배포 검증에서 확인
-- **Task 004: 견적서 조회 페이지 UI와 반응형 (F002, F012)** - **✅ 보류** (See: /tasks/004-invoice-page-ui.md). 작업 파일에 "테스트 체크리스트" 섹션이 없어 전 항목 `[x]` 여부를 확인할 수 없습니다. 결과 기록은 실패 2건이 모두 해소되어 "체크리스트 전 항목 통과"로 끝나며 `lint`, `tsc`, `build` 통과 기록도 있습니다. 체크리스트 섹션을 복원하거나 결과 기록으로 갈음할지 결정이 필요합니다.
+- **Task 004: 견적서 조회 페이지 UI와 반응형 (F002, F012)** ✅ - 완료 (See: /tasks/004-invoice-page-ui.md). 작업 파일에 "테스트 체크리스트" 섹션이 없어 사용자 결정(2026-11-20)에 따라 "테스트 결과" 기록으로 갈음합니다. 실패 2건은 모두 해소되어 "체크리스트 전 항목 통과"로 끝나며(`retry` 복구 확인, `/invoice/abc` HTTP 404는 Proxy로 해소), `lint`, `tsc --noEmit`, `build` 통과 기록이 있습니다.
 
 ## 남은 MVP 작업 (이 로드맵 범위 밖)
 
 - 이전 MVP 로드맵은 `git show HEAD:docs/ROADMAP.md`에서 볼 수 있습니다.
-- **Task 007: 견적서 공유 URL 생성 체계** - 진행 중 (See: /tasks/007-share-url.md). 작업 파일에 미체크 항목 3건: 노션 Formula 링크를 새 브라우저에서 열기(사용자가 Formula 컬럼을 추가해야 확인 가능), 프리뷰/운영의 Vercel URL 규칙(배포 검증에서 확인), 문서 상태 갱신
+- **Task 007: 견적서 공유 URL 생성 체계** ✅ - 완료 (See: /tasks/007-share-url.md). 사용자 결정(2026-11-20)으로 미확인 3건(노션 Formula 링크 열기, 프리뷰/운영 Vercel URL 규칙, 문서 상태 갱신)은 확인을 생략했습니다. 배포 URL에서 canonical 일치는 확인했습니다
 - **Task 008: 핵심 기능 통합 테스트** ✅ - 완료 (See: /tasks/008-integration-test.md)
-- **Task 013: Vercel 배포와 운영 준비** - 우선순위, 진행 중 (See: /tasks/013-deploy.md, 이전 MVP 로드맵의 Task 010)
+- **Task 013: Vercel 배포와 운영 준비** ✅ - 완료 (See: /tasks/013-deploy.md, 이전 MVP 로드맵의 Task 010)
   - ✅ 서버 에러 로깅 정리(노션 오류 코드와 요청 ID만 기록, 잘못된 키 시나리오로 확인), README 운영 문서, `npm run check-all` 추가
   - ✅ 결정: CI와 테스트 러너는 도입하지 않음
-  - 남음: 사용자의 Vercel 연결과 환경변수 입력, 운영 도메인 확정과 노션 Formula 갱신 → 프리뷰와 운영 URL 검증(shrimp T19)
+  - ✅ 배포 URL(`invoice-web-two-coral.vercel.app`) 1차 확인: 조회·PDF·404·noindex·한글 폰트 임베드·375/768px 가로 스크롤 없음·콘솔 에러 0
+  - 확인 생략(사용자 결정, 2026-11-20): 프리뷰/운영 구분, 운영 도메인 재검증, 노션 Formula 링크, PDF 육안 확인, 배포 환경 오류 시나리오. 작업 파일 체크박스는 `[ ]`로 남아 있음
 - **Task 009: 캐시 전략, 성능, 접근성 개선** ✅ - 완료 (See: /tasks/009-cache-perf-a11y.md)
   - ✅ 캐시 수명 유지와 PDF 캐싱 미도입 결정, 재검증 엔드포인트 `POST /api/revalidate` 도입(Bearer 토큰, 토큰이 없으면 503)
   - ✅ 접근성 Lighthouse 100점(`definition-list` 수정), 성능은 캐시 적중 시 100점. 첫 요청(캐시 없음, 항목 30개)은 86~87점으로 사용자 결정에 따라 예외 허용
@@ -89,4 +90,4 @@
 
 **문서 버전**: v4.0
 **최종 업데이트**: 2026-11-20
-**진행 상황**: Phase 5 완료 (3/3 Tasks, Task 010~012). MVP 잔여 중 Task 009 완료. 관리자 기능은 보류
+**진행 상황**: Phase 5 완료 (3/3 Tasks, Task 010~012). MVP 잔여 Task 007, 009, 013 완료(007, 013은 일부 확인 생략). 관리자 기능은 보류

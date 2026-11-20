@@ -82,3 +82,14 @@
 - Vercel 환경(프리뷰, 운영)에서의 로그 형식과 함수 로그 조회 방법
 - `restricted_resource` 같은 다른 노션 오류 코드의 실제 로그(코드는 `error.code`를 그대로 출력하는 구조라 같은 형식이 될 것으로 보이나 직접 재현하지 않음)
 - T19 항목 전부(배포 후)
+
+### T19 프리뷰 1차 (2026-11-20, https://invoice-web-two-coral.vercel.app, curl + Playwright MCP)
+- 통과: 접근 보호 없이 열림. `/` 200, `/invoice/<정상 ID>` 200(`[TEST] 정상`, 총액 ₩2,490,000, 항목 3개, 링크 복사/PDF 다운로드 버튼), 콘솔 메시지 0건
+- 통과: 404 계열. `/invoice/abc` HTTP 404, `/invoice/abc/pdf` 404, 형식은 맞지만 없는 ID의 PDF 404. 없는 ID 페이지는 HTTP 200(404 화면, 설계된 동작)
+- 통과: PDF `/invoice/<ID>/pdf` 200, `application/pdf`, 68,709바이트, `Content-Disposition: attachment`, 임베드 폰트 `NotoSansKR-Regular/Bold` (Vercel 함수에 폰트 포함됨, `outputFileTracingIncludes` 불필요). 글자 렌더링은 눈으로 보지 않았고 폰트 임베드만 확인
+- 통과: `robots: noindex, nofollow`, canonical이 접속한 프리뷰 URL과 같음
+- 통과: 375px, 768px에서 가로 스크롤 없음(scrollWidth = 뷰포트 폭), 1512px에서도 동일
+- 미확인: 이 URL이 프리뷰 배포인지 운영 별칭인지(`VERCEL_ENV` 규칙 판정 불가), 노션 `공유 링크` Formula 링크, 운영 도메인, 1280px 정확한 폭, PDF 화면 육안 확인, 오류 원문 비노출 시나리오(잘못된 키는 배포 환경에서 시험하지 않음)
+
+### 사용자 결정: 남은 항목 확인 생략 (2026-11-20)
+- 프리뷰 1차에서 확인하지 못한 항목(프리뷰/운영 구분과 `VERCEL_ENV` 규칙, 노션 `공유 링크` Formula 링크, 운영 도메인 재검증, PDF 육안 확인, 1280px 정확한 폭, 배포 환경 오류 시나리오)은 사용자가 "확인 안 해도 괜찮다"고 결정해 수행하지 않습니다. 체크박스는 실제로 확인하지 않았으므로 `[ ]`로 둡니다.
