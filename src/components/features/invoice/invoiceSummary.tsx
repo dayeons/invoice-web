@@ -1,4 +1,3 @@
-import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/format";
 import type { Invoice } from "@/types/invoice";
 
@@ -12,8 +11,8 @@ export function InvoiceSummary({ invoice }: { invoice: Invoice }) {
           <dt className="text-muted-foreground">소계</dt>
           <dd>{formatCurrency(subtotal)}</dd>
         </div>
-        <Separator />
-        <div className="flex justify-between gap-4 text-base font-bold">
+        {/* dl의 직접 자식은 dt/dd를 감싼 div만 허용되므로 구분선은 separator 요소 대신 테두리로 그립니다. */}
+        <div className="flex justify-between gap-4 border-t pt-2 text-base font-bold">
           <dt>총액</dt>
           <dd>{formatCurrency(invoice.totalAmount)}</dd>
         </div>
