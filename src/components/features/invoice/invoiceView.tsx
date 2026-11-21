@@ -1,6 +1,6 @@
+import { CopyLinkButton } from "@/components/common/copyLinkButton";
 import type { Invoice } from "@/types/invoice";
 
-import { CopyLinkButton } from "./copyLinkButton";
 import { DownloadPdfButton } from "./downloadPdfButton";
 import { InvoiceHeader } from "./invoiceHeader";
 import { InvoiceItemsTable } from "./invoiceItemsTable";

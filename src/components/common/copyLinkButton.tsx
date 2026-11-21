@@ -1,10 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { Check, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+
+type CopyLinkButtonProps = {
+  url: string;
+  // 버튼 크기. 기본값은 견적서 페이지의 기본 크기입니다.
+  size?: ComponentProps<typeof Button>["size"];
+  // 접근성 이름 뒤에 붙는 대상(예: 견적서 번호). 있으면 "링크 복사: <대상>"이 됩니다. 보이는 글자를 이름이 포함합니다.
+  subject?: string;
+  // 복사 실패 토스트 문구. 기본값은 견적서 페이지 기준입니다.
+  errorMessage?: string;
+};
+
+const DEFAULT_ERROR_MESSAGE =
+  "링크를 복사하지 못했습니다. 주소창의 링크를 직접 복사해 주세요.";
 
 const COPIED_RESET_MS = 2000;
 
@@ -37,9 +50,14 @@ async function copyText(text: string) {
   }
 }
 
-// 견적서 공유 링크 복사 버튼 (F010)
+// 견적서 공유 링크 복사 버튼 (F010). 견적서 페이지와 관리자 목록이 함께 씁니다.
 // 링크는 서버에서 getInvoiceUrl로 완성해 넘깁니다. 클라이언트에서는 siteConfig.url의 Vercel 값을 읽을 수 없기 때문입니다.
-export function CopyLinkButton({ url }: { url: string }) {
+export function CopyLinkButton({
+  url,
+  size,
+  subject,
+  errorMessage = DEFAULT_ERROR_MESSAGE,
+}: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,7 +72,7 @@ export function CopyLinkButton({ url }: { url: string }) {
     const ok = await copyText(url);
 
     if (!ok) {
-      toast.error("링크를 복사하지 못했습니다. 주소창의 링크를 직접 복사해 주세요.");
+      toast.error(errorMessage);
       return;
     }
 
@@ -64,10 +82,14 @@ export function CopyLinkButton({ url }: { url: string }) {
     timer.current = setTimeout(() => setCopied(false), COPIED_RESET_MS);
   }
 
+  const label = copied ? "복사됨" : "링크 복사";
+
   return (
     <Button
       type="button"
       variant="outline"
+      size={size}
+      aria-label={subject ? `${label}: ${subject}` : undefined}
       className="print:hidden"
       onClick={handleClick}
     >
@@ -76,7 +98,7 @@ export function CopyLinkButton({ url }: { url: string }) {
       ) : (
         <LinkIcon data-icon="inline-start" />
       )}
-      {copied ? "복사됨" : "링크 복사"}
+      {label}
     </Button>
   );
 }
