@@ -26,21 +26,23 @@ npm run check-all    # lint + tsc --noEmit (build는 오래 걸려 포함하지 
 ## 아키텍처 (큰 그림)
 
 ### 라우팅 (`src/app`)
-- 공개 라우트는 `/`(안내 문구), `/invoice/[id]`(견적서 조회, 노션 페이지 ID), `/invoice/[id]/pdf`(PDF 다운로드 Route Handler, GET), `/api/revalidate`(견적서 캐시 즉시 재검증, POST, Bearer 토큰), `not-found.tsx`(404, F011)뿐입니다. 인증/대시보드/관리자 화면은 MVP 범위가 아닙니다.
-- 루트 `app/layout.tsx`는 `<html>`, 폰트, `AppProviders`만 담당합니다. 헤더/푸터 같은 공통 셸은 없습니다.
+- 공개 라우트는 `/`(안내 문구), `/invoice/[id]`(견적서 조회, 노션 페이지 ID), `/invoice/[id]/pdf`(PDF 다운로드 Route Handler, GET), `/api/revalidate`(견적서 캐시 즉시 재검증, POST, Bearer 토큰), `not-found.tsx`(404, F011)가 공개 라우트입니다. 관리자 영역은 `/admin`(견적서 목록, Task 016. 표/카드, 새로고침 Server Action `refreshInvoiceList`, 오류 경계 `(dashboard)/error.tsx`, 행마다 링크 복사 버튼, Task 017)과 `/admin/login`이며 비밀번호로 보호됩니다(Task 014). 관리자 화면은 목록과 링크 복사, 다크모드까지만 범위에 있고 상태 변경, 다중 관리자, 대시보드 통계는 범위 밖입니다.
+- 루트 `app/layout.tsx`는 `<html>`, 폰트, `AppProviders`만 담당합니다. 공개 페이지에는 헤더/푸터 같은 공통 셸이 없고, 관리자 헤더는 `app/admin/(dashboard)/layout.tsx`에만 있습니다(로그인 화면은 헤더 밖). `app/admin/layout.tsx`는 noindex 메타데이터만 담당합니다.
 - `/invoice/[id]`는 동적 params가 런타임 데이터이므로 `<Suspense>` 경계 안에서 `await params` 합니다.
-- Proxy(`src/proxy.ts`, matcher `/invoice/:id`)가 ID 형식 오류만 존재하지 않는 경로로 rewrite해 HTTP 404 + `not-found.tsx`로 응답합니다(노션 호출 없음, 형식 검사는 `src/lib/notion/id.ts` 공유). 형식은 맞지만 없는 ID, 휴지통, 다른 DB는 페이지의 `notFound()`로 404 화면 + noindex(HTTP 200)입니다.
+- 관리자 보호(Task 014): `ADMIN_PASSWORD` 비교(SHA-256 다이제스트끼리 `timingSafeEqual`) 후 HMAC-SHA256 서명 세션 쿠키(`admin_session`, httpOnly, sameSite=lax, 운영 secure, path=`/admin`, 만료 시각 서명 포함)를 발급합니다. 서명/검증은 `src/lib/admin/session.ts`(순수 모듈, `next/headers` import 금지), 쿠키 읽기와 `requireAdmin()`은 `src/lib/admin/auth.ts`(서버 전용), `login`/`logout`은 `src/app/admin/actions.ts`입니다. Proxy는 쿠키 서명과 만료만 낙관적으로 검사하므로, 페이지는 `<Suspense>` 안에서 `requireAdmin()`을 부르고 모든 Server Action은 시작할 때 세션을 다시 확인합니다. 레이아웃에서는 인증 검사를 하지 않습니다. 이 재확인을 지우지 마세요.
+- Proxy(`src/proxy.ts`, matcher `/invoice/:id`와 `/admin/:path*`)는 경로별로 분기합니다. `/invoice/:id`는 ID 형식 오류만 존재하지 않는 경로로 rewrite해 HTTP 404 + `not-found.tsx`로 응답합니다(노션 호출 없음, 형식 검사는 `src/lib/notion/id.ts` 공유). 형식은 맞지만 없는 ID, 휴지통, 다른 DB는 페이지의 `notFound()`로 404 화면 + noindex(HTTP 200)입니다. 세션이 없는 `/admin` 요청은 로그인 화면으로 redirect하지만, Server Action 요청(`next-action` 헤더)은 통과시켜 각 Action의 `requireAdmin()`이 재확인하게 합니다(Proxy가 redirect하면 클라이언트가 "예상치 못한 응답" 오류를 냄).
 - 사이트 이름, URL 등 전역 메타데이터는 `src/config/site.ts`에만 둡니다.
 
 ### 컴포넌트 레이어 (import 방향 고정)
 - `components/ui` (shadcn 생성물) ← `components/common` ← `components/layout` ← `components/features`
+- `CopyLinkButton`은 견적서 페이지와 관리자 목록이 함께 쓰므로 `components/common`에 있습니다(링크는 서버에서 `getInvoiceUrl`로 만들어 `url` props로 전달, 선택 props `size`, `subject`, `errorMessage`).
 - 상위 레이어가 하위 레이어를 import하는 것만 허용됩니다. 역방향 import는 만들지 마세요. (`common`, `features`는 필요할 때 생성)
 - `components/providers/appProviders.tsx`가 전역 Context의 유일한 진입점입니다. 새 전역 프로바이더는 여기에 추가합니다.
 - 페이지는 서버 컴포넌트로 두고, 상호작용이 필요한 부분(PDF 다운로드 버튼 등)만 `"use client"` 컴포넌트로 분리합니다.
 
 ### 데이터 흐름
-- 별도 DB 없이 노션이 유일한 저장소입니다. 노션 조회 계층(F001)은 `src/lib/notion/`의 `getInvoice`이며 실제 노션 DB로 검증했습니다(ROADMAP Task 005, 항목 3개씩 묶음 조회, 총 금액은 노션 롤업 값, 비어 있으면 항목 합계로 대체). PDF 생성(F003)은 `/invoice/[id]/pdf` Route Handler가 ID만 받아 `getInvoice`로 다시 조회해 `@react-pdf/renderer`로 만들며(형식 오류는 Proxy를 거치지 않으므로 핸들러가 직접 404, 이모지는 PDF 텍스트에서만 제거), `DownloadPdfButton`이 이를 내려받습니다. 조회는 `"use cache"`/`<Suspense>` 경계 안에서 합니다.
-- 환경변수는 `NOTION_API_KEY`, `NOTION_DATABASE_ID` (서버 전용, `.env.example` 참고). 선택 값 `REVALIDATE_SECRET`(서버 전용)은 `/api/revalidate`의 Bearer 토큰이며 비어 있으면 그 엔드포인트는 503으로 닫힙니다. 선택 값 `NEXT_PUBLIC_SITE_URL`(사이트 URL, 이 값에만 `NEXT_PUBLIC_` 허용)은 `siteConfig.url`이 `NEXT_PUBLIC_SITE_URL` → Vercel 배포 URL → `http://localhost:3000` 순으로 읽고, 공유 링크는 `getInvoiceUrl`(`src/lib/invoice-url.ts`)로 만듭니다.
+- 별도 DB 없이 노션이 유일한 저장소입니다. 노션 조회 계층(F001)은 `src/lib/notion/`의 `getInvoice`이며 실제 노션 DB로 검증했습니다(ROADMAP Task 005, 항목 3개씩 묶음 조회, 총 금액은 노션 롤업 값, 비어 있으면 항목 합계로 대체). PDF 생성(F003)은 `/invoice/[id]/pdf` Route Handler가 ID만 받아 `getInvoice`로 다시 조회해 `@react-pdf/renderer`로 만들며(형식 오류는 Proxy를 거치지 않으므로 핸들러가 직접 404, 이모지는 PDF 텍스트에서만 제거), `DownloadPdfButton`이 이를 내려받습니다. 조회는 `"use cache"`/`<Suspense>` 경계 안에서 합니다. 관리자 목록용 조회는 `src/lib/notion/invoiceList.ts`의 `listInvoices()`(Task 015)입니다. `databases.retrieve`로 데이터 소스 ID를 얻고(데이터 소스가 정확히 1개일 때만, 별도 `"use cache"`) `dataSources.query`를 100건씩 순차 호출하며, 견적 항목은 조회하지 않고 총 금액이 비면 `null`입니다. 상한 1,000건을 넘으면 `truncated: true`입니다. 캐시는 `cacheLife("minutes")` + 태그 `invoice-list`(`INVOICE_LIST_CACHE_TAG`)이고 세션 확인은 호출하는 쪽이 합니다. 오류는 `object_not_found` 포함 `logNotionError(error, "listInvoices")`로 한 줄 기록 후 내용 없는 `Error`를 던집니다. `/api/revalidate`는 `invoice-<id>`와 `invoice-list`를 함께 만료시킵니다.
+- 환경변수는 `NOTION_API_KEY`, `NOTION_DATABASE_ID` (서버 전용, `.env.example` 참고). 선택 값 `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`(서버 전용)은 관리자 로그인용이며 둘 중 하나라도 비어 있으면 관리자 기능이 닫혀 로그인할 수 없습니다. 선택 값 `REVALIDATE_SECRET`(서버 전용)은 `/api/revalidate`의 Bearer 토큰이며 비어 있으면 그 엔드포인트는 503으로 닫힙니다. 선택 값 `NEXT_PUBLIC_SITE_URL`(사이트 URL, 이 값에만 `NEXT_PUBLIC_` 허용)은 `siteConfig.url`이 `NEXT_PUBLIC_SITE_URL` → Vercel 배포 URL → `http://localhost:3000` 순으로 읽고, 공유 링크는 `getInvoiceUrl`(`src/lib/invoice-url.ts`)로 만듭니다.
 
 ## 이 저장소 특유의 함정
 

@@ -6,7 +6,8 @@
 ## 1. 프로젝트 개요
 
 - 목적: 노션 DB에 작성한 견적서를 `/invoice/[노션 페이지 ID]` 공개 URL로 조회하고 PDF로 내려받는 MVP
-- 별도 DB, 인증, 관리자 화면 없음. 노션이 유일한 저장소
+- 별도 DB 없음. 노션이 유일한 저장소
+- 관리자 영역 `/admin`은 비밀번호(환경변수)와 서명 쿠키로만 보호하는 1인용입니다. 범위는 견적서 목록, 링크 복사, 다크모드까지이며 계정/OAuth 로그인, 상태 변경은 범위 밖입니다 (ROADMAP Phase 6~7)
 - 데이터 접근은 서버에서만 수행
 
 ### 1.1 고정 스택 (`package.json` 기준)
@@ -38,7 +39,7 @@
 
 | 경로 | 책임 | 수정 규칙 |
 | --- | --- | --- |
-| `src/app/layout.tsx` | `<html>`, Geist 폰트, `AppProviders`, 전역 `metadata` | 헤더/푸터/공통 셸 추가 금지 |
+| `src/app/layout.tsx` | `<html>`, Geist 폰트, `AppProviders`, 전역 `metadata` | 헤더/푸터/공통 셸 추가 금지 (관리자 헤더는 `app/admin/(dashboard)/layout.tsx`에만) |
 | `src/app/page.tsx` | `/` 안내 문구 | 견적서 목록·검색 추가 금지 |
 | `src/app/invoice/[id]/page.tsx` | 견적서 조회 페이지 | 서버 컴포넌트 유지. 상호작용만 `"use client"` 분리 |
 | `src/app/api/revalidate/route.ts` | 견적서 캐시 즉시 재검증 (`POST`, Bearer `REVALIDATE_SECRET`, 본문 `{id}`) | 토큰은 `crypto.timingSafeEqual`로 비교, 노션 호출 금지, 응답과 로그에 토큰 금지 |
@@ -48,13 +49,17 @@
 | `src/lib/notion/properties.ts` | 노션 컬럼명 상수 `INVOICE_PROPS`, `ITEM_PROPS`와 값 추출 헬퍼 | 컬럼명 문자열은 이 파일에만 둔다 |
 | `src/lib/notion/invoice.ts` | `getInvoice`, `invoiceCacheTag` | 4.1절 불변 조건 유지 |
 | `src/lib/notion/id.ts` | `NOTION_ID_PATTERN`, `isNotionId`, `normalizeNotionId` | 서버 전용 모듈을 import하지 않는 순수 모듈 (Proxy와 공유) |
-| `src/proxy.ts` | `/invoice/:id` ID 형식 오류를 HTTP 404로 처리 | 노션 호출 금지 |
+| `src/proxy.ts` | `/invoice/:id` ID 형식 오류를 HTTP 404로 처리, `/admin/:path*` 세션 쿠키 낙관적 검사(서명과 만료만) | 노션 호출 금지. Server Action 요청(`next-action` 헤더)은 redirect하지 않고 통과시킨다. matcher를 바꿔도 페이지와 Server Action의 재확인을 지우지 않는다 |
+| `src/lib/admin/session.ts` | 세션 토큰 서명/검증, 비밀번호 비교, 관리자 설정 읽기 | `next/headers` 등 서버 렌더 전용 모듈을 import하지 않는 순수 모듈 (Proxy와 공유) |
+| `src/lib/admin/auth.ts` | `isAdminSession()`, `requireAdmin()` | **서버 전용.** `<Suspense>` 안에서만 호출, `"use cache"` 안에서 호출 금지. `isAdminSession`은 쿠키를 읽은 뒤 `connection()`을 기다려 만료 검사의 `Date.now()`가 프리렌더 오류를 내지 않게 한다(지우지 말 것) |
+| `src/app/admin/actions.ts` | `login`, `logout`, `refreshInvoiceList`(세션 재확인 → `updateTag`) Server Action | 새 Server Action은 시작할 때 `requireAdmin()`으로 세션 재확인 |
+| `src/app/admin/` | `layout.tsx`(noindex만), `login/page.tsx`(헤더 밖), `(dashboard)/`(헤더 + 목록 `page.tsx`, 노션 오류용 `error.tsx`) | 레이아웃에서 인증 검사 금지, 페이지에서 `<Suspense>` 안 `requireAdmin()` |
 | `src/types/invoice.ts` | `Invoice`, `InvoiceItem` | 화면과 PDF가 공유하는 정규화 타입 |
 | `src/lib/format.ts` | `formatDate`, `formatRelative`, `formatNumber`, `formatCurrency` | 날짜/금액 표시는 여기 함수만 사용 |
 | `src/lib/utils.ts` | `cn` (`"cn"` 패키지 재export) | |
 | `src/config/site.ts` | `siteConfig` (이름, 설명, URL) | 전역 메타데이터의 유일한 위치 |
 | `src/components/ui/` | shadcn 생성물 | **수동 수정 금지.** 추가는 `npx shadcn@latest add <name>` |
-| `src/components/common/` | 도메인 무관 공통 컴포넌트 | 현재 `statusBadge.tsx`. 필요할 때 파일 생성 |
+| `src/components/common/` | 도메인 무관 공통 컴포넌트 | 현재 `statusBadge.tsx`, `themeToggle.tsx`, `copyLinkButton.tsx`(견적서 페이지와 관리자 목록 공용). 필요할 때 파일 생성 |
 | `src/components/layout/` | 레이아웃 컴포넌트 (현재 `container.tsx`) | |
 | `src/components/features/` | 도메인 컴포넌트 | 견적서 컴포넌트는 `features/invoice/`에 있음 |
 | `src/components/providers/` | `appProviders.tsx`, `themeProvider.tsx` | 전역 Context는 `appProviders.tsx`에만 추가 |
@@ -107,6 +112,14 @@
 5. 관계(항목)가 `RELATION_INLINE_LIMIT`(25)개에 도달하면 `pages.properties.retrieve`로 전부 조회
 6. 총 금액 컬럼(노션 롤업, 숫자 컬럼도 읽음)이 비면 항목 금액 합계로 대체
 7. `invoiceCacheTag` 형식은 `invoice-<하이픈 없는 소문자 32자리>`. 바꾸면 재검증 코드와 함께 바꾼다.
+
+`listInvoices()`(`src/lib/notion/invoiceList.ts`) 수정 시 아래를 유지한다.
+
+1. 함수 본문 첫 문장 `"use cache"`, 이어서 `cacheLife("minutes")`, `cacheTag(INVOICE_LIST_CACHE_TAG)` (`"invoice-list"`). 함수 안에서 `cookies()`를 읽지 않고, 세션 확인은 호출하는 쪽이 한다.
+2. 데이터 소스 ID는 별도 `"use cache"` 함수로 얻고, 데이터 소스가 정확히 1개가 아니면 오류로 처리한다.
+3. `dataSources.query`는 `page_size: 100`, `start_cursor`로 순차 호출한다(병렬 금지). 정렬은 발행일 내림차순 후 생성 시각 내림차순, 상한 1,000건 초과 시 `truncated: true`.
+4. `isFullPage`와 `in_trash`로 걸러내고 견적 항목은 조회하지 않는다. 총 금액이 비면 `null`이다.
+5. 노션 오류는 `object_not_found`를 포함해 `logNotionError(error, "listInvoices")` 후 내용 없는 새 `Error`를 던진다(빈 목록으로 숨기지 않음).
 
 ### 4.2 오류 분기
 
@@ -174,7 +187,7 @@ Next.js 코드를 쓰기 전에 설치된 문서를 먼저 읽는다. 기준 경
   - ❌ `<DropdownMenuTrigger asChild><Button /></DropdownMenuTrigger>`
   - ✅ `<DropdownMenuTrigger render={<Button />} />`
 - 링크를 버튼처럼 보이게 할 때는 `<Link className={buttonVariants()} />`를 쓴다. ❌ `<Button asChild><Link /></Button>`
-- 설치된 컴포넌트: `alert`, `badge`, `button`, `card`, `empty`, `separator`, `skeleton`, `sonner`, `spinner`, `table`, `tooltip`. 새 UI가 필요하면 이 목록을 먼저 확인하고, 없으면 shadcn MCP 또는 `npx shadcn@latest add <name>`으로 추가한다.
+- 설치된 컴포넌트: `alert`, `badge`, `button`, `card`, `empty`, `input`, `label`, `separator`, `skeleton`, `sonner`, `spinner`, `table`, `tooltip`. 새 UI가 필요하면 이 목록을 먼저 확인하고, 없으면 shadcn MCP 또는 `npx shadcn@latest add <name>`으로 추가한다.
 - `ui/table.tsx`는 `"use client"` 파일이지만 서버 컴포넌트에서 import해도 된다.
 
 ### 5.3 기타
@@ -254,7 +267,7 @@ GET /invoice/[id]
 1. 요청이 어느 기능 ID(F001~F012)와 Task에 속하는지 확인 → `docs/ROADMAP.md`의 범위, 완료 기준, 테스트 체크리스트를 따른다.
 2. Next.js API를 쓴다 → 5.1절 설치 문서를 먼저 읽는다.
 3. UI가 필요하다 → `src/components/ui`에 있는지 확인 → 없으면 shadcn으로 추가 → 도메인 컴포넌트는 `features/`, 도메인 무관이면 `common/`.
-4. 노션 데이터가 필요하다 → 새 호출을 만들지 말고 `getInvoice`를 재사용한다. 필드가 부족하면 7절의 "필드 추가" 순서로 확장한다.
+4. 노션 데이터가 필요하다 → 견적서 1건은 새 호출을 만들지 말고 `getInvoice`를, 목록은 `listInvoices`를 재사용한다. 필드가 부족하면 7절의 "필드 추가" 순서로 확장한다.
 5. 서버 컴포넌트에 시간·난수가 필요하다 → `"use cache"` 또는 `<Suspense>` 경계 안으로 옮긴다.
 
 ### 8.2 사용자에게 확인하고 진행하는 경우 (임의 결정 금지)
@@ -264,7 +277,8 @@ GET /invoice/[id]
 | `formatCurrency` 표기 변경 | 실제 출력은 `₩1,500,000`인데 ROADMAP 테스트 예시는 `1,500,000원`이다. 둘 중 무엇이 의도인지 모른다. |
 | `.mcp.json` 커밋 | `.mcp.json`은 로컬 절대경로를 포함한다. (`shrimp_data/`와 `.env.example` 예외는 `.gitignore`에 반영되어 있다.) |
 | ROADMAP에 없는 의존성 추가 | 계획된 것은 `@react-pdf/renderer`뿐이다. |
-| MVP 범위 밖 기능 (관리자 대시보드, 상태 변경, 이메일 발송, 로그인, 다국어, 템플릿, 버전 관리, 만료 처리) | PRD 3절·ROADMAP "범위 밖"에 제외로 명시되어 있다. |
+| 범위 밖 기능 (대시보드 통계, 상태 변경, 이메일 발송, 계정/OAuth 로그인, 다중 관리자, 다국어, 템플릿, 버전 관리, 만료 처리) | PRD 3절·ROADMAP "보류 항목"에 제외로 명시되어 있다. 관리자 비밀번호 로그인과 목록은 Phase 6~7에서 편입되었다. |
+| 새 npm 의존성 (인증 라이브러리 포함) | 관리자 세션은 `node:crypto`로 구현한다. |
 | 노션 `상태` 값으로 접근 제어나 상태 변경 | MVP에서는 배지 표시만 한다. |
 
 ## 9. 금지 사항
@@ -279,7 +293,10 @@ GET /invoice/[id]
 
 ### 구조
 
-- 공통 셸(헤더/푸터), 인증, 대시보드, 관리자 화면을 만들지 않는다.
+- 공개 페이지에 공통 셸(헤더/푸터)을 만들지 않는다. 관리자 헤더는 `app/admin/(dashboard)/layout.tsx`에만 둔다.
+- 관리자 화면(`/admin`)은 ROADMAP에 있는 범위(목록, 링크 복사, 다크모드)만 만든다. 대시보드 통계와 상태 변경은 만들지 않는다.
+- 관리자 인증을 Proxy나 레이아웃에만 의존하지 않는다. 페이지는 `requireAdmin()`, Server Action은 시작할 때 세션 재확인을 한다.
+- `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`에 `NEXT_PUBLIC_`을 붙이지 않고, 값과 세션 쿠키를 로그나 화면에 출력하지 않는다.
 - `components/ui/*`를 직접 편집하지 않는다.
 - 역방향 import를 만들지 않는다. (2.2절)
 - 노션 컬럼명 문자열을 `properties.ts` 밖에 쓰지 않는다.

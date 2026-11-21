@@ -14,6 +14,7 @@
 |---|---|
 | `/invoice/[id]` | 견적서 조회 페이지 (노션 페이지 ID 기반 공개 URL) |
 | `/invoice/[id]/pdf` | 견적서 PDF 다운로드 (GET, 서버가 노션에서 다시 조회) |
+| `/admin` | 관리자 화면 (비밀번호 로그인 필요, 견적서 목록과 새로고침 버튼 제공). 로그인은 `/admin/login`, noindex |
 | `/api/revalidate` | 견적서 캐시 즉시 재검증 (POST, `Authorization: Bearer <REVALIDATE_SECRET>`, 본문 `{"id": "<노션 페이지 ID>"}`) |
 | 404 | 존재하지 않는 견적서 접근 시 안내 (`not-found`) |
 | `/` | 고유 링크로 접근하라는 안내 문구 |
@@ -25,7 +26,7 @@
 - F003 PDF 다운로드 (`@react-pdf/renderer`, Noto Sans KR, PDF 텍스트에서만 이모지 제거)
 - F011 견적서 유효성 검증 (404 처리)
 - F012 반응형 레이아웃
-- 다크모드 토글(라이트/다크/시스템, `next-themes`)과 견적서 공유 링크 복사 버튼
+- 다크모드 토글(라이트/다크/시스템, `next-themes`)과 견적서 공유 링크 복사 버튼(관리자 목록 행에서도 복사 가능)
 
 ## 기술 스택
 
@@ -61,6 +62,8 @@ npm run lint                 # ESLint
 | `NOTION_API_KEY` | 필수 | 서버 전용 | 노션 Integration의 내부 통합 토큰. `NEXT_PUBLIC_`을 붙이지 않습니다. |
 | `NOTION_DATABASE_ID` | 필수 | 서버 전용 | 견적서(Invoices) 데이터베이스 ID |
 | `NEXT_PUBLIC_SITE_URL` | 선택 | 서버/브라우저 | 견적서 공유 링크의 기준 도메인. 없으면 Vercel 배포 URL, 그다음 `http://localhost:3000`. 이 값만 `NEXT_PUBLIC_`을 허용하며 **빌드 시점에 반영되므로 바꾼 뒤에는 다시 빌드**합니다. |
+| `ADMIN_PASSWORD` | 선택 | 서버 전용 | `/admin` 로그인 비밀번호. `ADMIN_SESSION_SECRET`과 함께 있어야 관리자 기능이 열리고, 하나라도 비어 있으면 로그인이 닫힙니다. 시도 횟수 제한이 없으니 긴 무작위 값을 씁니다. |
+| `ADMIN_SESSION_SECRET` | 선택 | 서버 전용 | 관리자 세션 쿠키 서명 비밀키(HMAC-SHA256). 비밀번호와 다른 무작위 값을 쓰며, 바꾸면 모든 세션이 로그아웃됩니다. |
 | `REVALIDATE_SECRET` | 선택 | 서버 전용 | `/api/revalidate` 호출용 Bearer 토큰. 비어 있으면 그 엔드포인트는 503으로 닫힙니다. 충분히 긴 무작위 문자열을 씁니다(예: `openssl rand -base64 32`). |
 
 ## 노션 데이터베이스 설정
@@ -116,7 +119,7 @@ curl -X POST https://<도메인>/api/revalidate \
   -d '{"id": "<노션 페이지 ID>"}'
 ```
 
-응답: 성공 200, 토큰 없음/불일치 401, ID 형식 오류나 본문 오류 400, `REVALIDATE_SECRET` 미설정 503. 존재하지 않는 ID도 200으로 응답합니다(캐시 태그만 만료시킴).
+응답: 성공 200, 토큰 없음/불일치 401, ID 형식 오류나 본문 오류 400, `REVALIDATE_SECRET` 미설정 503. 존재하지 않는 ID도 200으로 응답합니다(캐시 태그만 만료시킴). 같은 요청에서 관리자 견적서 목록 캐시(태그 `invoice-list`)도 함께 만료되며, 응답 형식은 그대로입니다.
 
 ### 문제가 생겼을 때
 
