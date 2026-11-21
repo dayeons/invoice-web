@@ -43,12 +43,12 @@
 | 공유 URL(F010) | 완료. `getInvoiceUrl`은 서버/클라이언트 공용 순수 함수, `siteConfig.url`의 Vercel 값은 서버에서만 읽힘 | `src/lib/invoice-url.ts`, `src/config/site.ts` |
 | 캐시 재검증 | 완료. `POST /api/revalidate`(Bearer, 미설정 시 503), 본문 `{id}`로 `invoice-<id>` 태그와 `invoice-list` 태그를 만료(Task 015) | `src/app/api/revalidate/route.ts` |
 | Proxy | 완료(Task 014). matcher `/invoice/:id`(ID 형식 오류만 404로 rewrite)와 `/admin/:path*`(세션 쿠키 서명/만료 낙관적 검사) | `src/proxy.ts` |
-| 다크모드 기반 | 완료. `ThemeProvider`(class, 기본 system)가 `AppProviders`를 통해 전 라우트에 적용, `.dark` 토큰, sonner `Toaster`도 테마를 따름. `ThemeToggle`(common)은 견적서 페이지에만 배치 | `src/components/providers/`, `src/app/globals.css`, `src/components/common/themeToggle.tsx` |
+| 다크모드 기반 | 완료. `ThemeProvider`(class, 기본 system)가 `AppProviders`를 통해 전 라우트에 적용, `.dark` 토큰, sonner `Toaster`도 테마를 따름. `ThemeToggle`(common)은 견적서 페이지와 관리자 헤더에 배치. 관리자 화면(로그인, 목록 표/카드, 오류, 토스트)은 운영 빌드에서 라이트/다크/시스템을 확인했고 공개 페이지와 테마가 공유됨(Task 018) | `src/components/providers/`, `src/app/globals.css`, `src/components/common/themeToggle.tsx` |
 | 링크 복사 | 완료(견적서 페이지 Task 011, 관리자 목록 행 Task 017). `CopyLinkButton`은 `common`에 있고 선택 props `size`, `subject`(접근성 이름 "링크 복사: <대상>"), `errorMessage`를 받으며 기본값은 견적서 페이지 동작. 목록은 서버에서 행마다 `getInvoiceUrl`로 만든 링크를 전달 | `src/components/common/copyLinkButton.tsx`, `src/components/features/admin/invoiceList.tsx` |
 | 상태 배지 | 완료. 대기 secondary, 승인 default, 거절 destructive, 그 외 outline, 값이 없으면 숨김 | `src/components/common/statusBadge.tsx` |
 | 노션 목록 조회 | 완료(Task 015, 총 금액 `null` 매핑과 값 수정 반영은 사용자 결정으로 확인 생략). `listInvoices()`는 `databases.retrieve`(데이터 소스 1개) + `dataSources.query` 100건씩 순차, `"use cache"` + `cacheLife("minutes")` + 태그 `invoice-list`, `/api/revalidate`가 목록 태그도 만료 | `src/lib/notion/invoiceList.ts` |
 | 관리자 접근 보호, 레이아웃 셸 | 완료(Task 014). `ADMIN_PASSWORD` + HMAC 서명 세션 쿠키(`ADMIN_SESSION_SECRET`), `/admin/login`, 헤더(`AdminHeader`, `ThemeToggle`, 로그아웃). Proxy는 세션 없는 Server Action 요청을 통과시켜 Action의 `requireAdmin()`이 재확인(Task 016) | `src/lib/admin/`, `src/app/admin/`, `src/components/layout/adminHeader.tsx`, `src/components/features/admin/` |
-| 관리자 견적서 목록 화면 | 구현 완료(Task 016, 검증 결과는 `tasks/016-admin-invoice-list.md`). `/admin`에 표(768px 이상)/카드, `<Suspense>` 안 `requireAdmin()` → `listInvoices()`, `refreshInvoiceList`(세션 재확인 → `updateTag`), `(dashboard)/error.tsx`. 링크 복사 버튼은 Task 017 | `src/app/admin/(dashboard)/`, `src/components/features/admin/invoiceList.tsx` |
+| 관리자 견적서 목록 화면 | 완료(Task 016, 노션 값 수정 후 "새로고침" 반영은 사용자 결정으로 확인 생략, 검증 결과는 `tasks/016-admin-invoice-list.md`). `/admin`에 표(768px 이상)/카드, `<Suspense>` 안 `requireAdmin()` → `listInvoices()`, `refreshInvoiceList`(세션 재확인 → `updateTag`), `(dashboard)/error.tsx`. 링크 복사 버튼은 Task 017 | `src/app/admin/(dashboard)/`, `src/components/features/admin/invoiceList.tsx` |
 | shadcn 컴포넌트 | alert, badge, button, card, empty, input, label, separator, skeleton, sonner, spinner, table, tooltip | `src/components/ui/` |
 | 노션 SDK | `@notionhq/client` 5.31.1, 기본 API 버전 `2025-09-03`. `databases`에는 retrieve/update/create만 있고(`databases.query` 없음) 행 조회는 `dataSources.query({ data_source_id, start_cursor, page_size, sorts })`. `iteratePaginatedAPI` 헬퍼 제공, 429는 기본 2회 자동 재시도 | `node_modules/@notionhq/client` |
 | 검증 도구 | `npm run check-all`(lint + `tsc --noEmit`) 있음, 테스트 러너/CI 없음 | `package.json` |
@@ -67,7 +67,7 @@
    - 대안 C, OAuth(Auth.js 등): 가장 안전하지만 의존성과 설정이 커서 1인 관리자 규모에는 과함
 2. **목록 캐시와 재검증** - 권장: 목록을 `"use cache"` + `cacheLife("minutes")` + 태그 `invoice-list`로 캐시하고, 관리자 화면의 "새로고침" 버튼(Server Action + `updateTag`)과 기존 `POST /api/revalidate`(같은 호출에서 목록 태그도 만료, 응답 계약은 그대로)로 즉시 반영
    - 대안: 캐시 없이 접속마다 노션 조회(항상 최신이지만 접속마다 호출이 생기고 노션 지연이 화면에 그대로 드러남)
-3. **승인/거절 테스트 데이터** - 권장: Task 018에서 목록에 승인/거절 상태가 없으면 `[TEST] 승인`, `[TEST] 거절` 행 2건을 추가(기존 행 수정 금지, 확인 후 휴지통). Task 008 기록에는 ②의 PDF 상태가 "승인"으로 적혀 있으므로 먼저 목록으로 실제 값을 확인
+3. **승인/거절 테스트 데이터** - 결정(2026-11-21): 행을 추가하지 않고 계산 색상 확인으로 갈음. 실제로는 DB에 승인/거절 행이 이미 있어 실데이터로 확인(Task 018). 처음 권장안: Task 018에서 목록에 승인/거절 상태가 없으면 `[TEST] 승인`, `[TEST] 거절` 행 2건을 추가(기존 행 수정 금지, 확인 후 휴지통). Task 008 기록에는 ②의 PDF 상태가 "승인"으로 적혀 있으므로 먼저 목록으로 실제 값을 확인
    - 대안: 행을 추가하지 않고 Task 012처럼 계산 색상 확인으로 갈음
 
 ## 의존성과 병렬 작업
@@ -84,9 +84,9 @@ Task 015 (목록 조회 계층) ───────┘
 
 ## 개발 단계
 
-### Phase 6: 관리자 기반 구축
+### Phase 6: 관리자 기반 구축 ✅
 
-- **Task 014: 관리자 접근 보호와 관리자 레이아웃 셸 구축** ✅ - 우선순위 - See: `/tasks/014-admin-auth.md`
+- **Task 014: 관리자 접근 보호와 관리자 레이아웃 셸 구축** ✅ - See: `/tasks/014-admin-auth.md`
   - 목표: `/admin` 이하를 비밀번호로 보호하고, 로그인 화면과 헤더(제목, `ThemeToggle`, 로그아웃)가 있는 관리자 레이아웃 골격을 만든다. 목록 자리는 비워 둔다.
   - 의존: 없음 (Task 015와 병렬)
   - 관련 파일
@@ -161,9 +161,9 @@ Task 015 (목록 조회 계층) ───────┘
     - 캐시: 재접속은 캐시 적중(응답 시간으로 확인), `/api/revalidate` 호출 직후 목록이 새로 조회됨, 상세 캐시 재검증(Task 009 시나리오) 회귀 없음
     - 정리: 임시 검증 페이지를 만들었다면 삭제되어 해당 경로가 404
 
-### Phase 7: 관리자 목록 화면과 통합
+### Phase 7: 관리자 목록 화면과 통합 ✅
 
-- **Task 016: 관리자 견적서 목록 화면 구현** (구현과 검증 완료, 노션 쓰기가 필요한 1건 미확인으로 ✅ 보류: 노션 값 수정 후 "새로고침" 반영. 사용자 승인 필요) - See: `/tasks/016-admin-invoice-list.md`
+- **Task 016: 관리자 견적서 목록 화면 구현** ✅ (노션 쓰기가 필요한 1건은 사용자 결정(2026-11-21)으로 확인 생략: 노션 값 수정 후 "새로고침" 반영) - See: `/tasks/016-admin-invoice-list.md`
   - 목표: `/admin`에서 견적서 목록을 표(768px 이상)와 카드(768px 미만)로 보여 주고 빈 상태, 노션 오류, 로딩 상태를 갖춘다.
   - 의존: Task 014(레이아웃, `requireAdmin`), Task 015(`listInvoices`, 타입)
   - 관련 파일
@@ -185,7 +185,7 @@ Task 015 (목록 조회 계층) ───────┘
     - [x] 1. 더미 `InvoiceListItem[]`로 표/카드/빈 상태/스켈레톤 UI 구현
     - [x] 2. 실제 `listInvoices()` 연결, 오류 경계, 새로고침 Server Action
     - [x] 3. `npm run check-all`, `npm run build`
-    - [ ] 4. Playwright MCP로 테스트 체크리스트 수행, 결과 기록
+    - [x] 4. Playwright MCP로 테스트 체크리스트 수행, 결과 기록 (미확인 1건은 사용자 결정으로 생략)
   - Playwright MCP 테스트
     - 정상: 로그인 → 목록 표시, 행 값이 노션과 상세 페이지 값과 일치, "열기" → 새 탭에서 같은 견적서, 노션 값 수정 후 "새로고침" → 바로 반영
     - 에러: 잘못된 노션 키 → 헤더가 남은 오류 화면과 "다시 시도", 세션 쿠키를 지운 뒤 "새로고침" → 로그인 화면(Server Action 재확인)
@@ -217,7 +217,7 @@ Task 015 (목록 조회 계층) ───────┘
     - 회귀: 견적서 페이지 링크 복사(Task 011 핵심 시나리오), PDF 버튼과 같은 줄, 인쇄 시 숨김
     - 반응형/테마: 375px 카드 안에서 버튼이 잘리지 않음, 768/1280px 표의 작업 열, 라이트/다크에서 버튼과 토스트가 보임
 
-- **Task 018: 관리자 다크모드 점검, 통합 테스트와 문서 정리**
+- **Task 018: 관리자 다크모드 점검, 통합 테스트와 문서 정리** ✅ (빈 상태, 스켈레톤, 상태 없음 배지는 Task 016 기록으로 갈음해 재수행하지 않음. 승인/거절은 사용자 결정으로 계산 색상 확인을 택했으나 실데이터가 있어 실제 값으로 확인) - See: `/tasks/018-admin-integration-test.md`
   - 목표: 운영 빌드에서 관리자 여정 전체와 다크모드를 통합 검증하고, 범위가 바뀐 문서를 정리한다. 새 기능은 만들지 않는다.
   - 의존: Task 014~017
   - 관련 파일: `tasks/014`~`017` 작업 파일(미확인 항목 보완 기록), `docs/PRD.md`, `README.md`, `CLAUDE.md`, `shrimp-rules.md`, `docs/ROADMAP.md`
@@ -228,11 +228,11 @@ Task 015 (목록 조회 계층) ───────┘
     - 보안 회귀: 비로그인과 위조 쿠키는 `/admin` 차단, 로그아웃 후 뒤로 가기 동작 확인(새로고침이나 버튼 조작 시 로그인 화면), 서버 로그에 비밀번호·쿠키 값·견적서 내용 없음
     - 문서: `docs/PRD.md`(메뉴 구조에 관리자 목록 추가, "MVP 이후 기능"의 관리자 대시보드 중 목록만 편입했다고 표시, 새 기능 ID 부여 예: F020 관리자 견적서 목록, F021 목록 링크 복사, F022 관리자 다크모드), `README.md`(주요 페이지, 관리자 사용법, 환경변수, "개발 상태"와 "배포"의 낡은 Task 007/013 문구), `CLAUDE.md`·`shrimp-rules.md` 최종 대조, 이 문서의 "현재 구현 상태" 갱신
   - 구현 단계
-    - [ ] 1. `npm run check-all`, `npm run build`, 운영 서버 시작
-    - [ ] 2. 운영 빌드에서 Playwright MCP로 관리자 여정과 다크모드 조합 수행
-    - [ ] 3. 승인/거절 데이터 확인(필요하면 사용자 승인 후 `[TEST]` 행 추가)
-    - [ ] 4. 014~017 작업 파일의 미확인 항목 보완 기록
-    - [ ] 5. 문서 정리와 ROADMAP 갱신
+    - [x] 1. `npm run check-all`, `npm run build`, 운영 서버 시작
+    - [x] 2. 운영 빌드에서 Playwright MCP로 관리자 여정과 다크모드 조합 수행
+    - [x] 3. 승인/거절 데이터 확인(실데이터가 이미 있어 행 추가 없음)
+    - [x] 4. 014~017 작업 파일의 미확인 항목 보완 기록
+    - [x] 5. 문서 정리와 ROADMAP 갱신
   - Playwright MCP 테스트
     - 정상: 375/768/1280px × 라이트/다크 6조합에서 관리자 여정 전체, 복사 링크와 상세 canonical 일치, 새로고침 후 테마 유지
     - 에러: 잘못된 노션 키에서 목록 오류 화면(다크 포함), 관리자 환경변수 누락 시 로그인 불가
@@ -264,9 +264,10 @@ Task 015 (목록 조회 계층) ───────┘
 - **서버리스 캐시**: Next 문서상 기본 메모리 `use cache`는 서버리스에서 요청 사이에 유지되지 않을 수 있습니다. Task 009 측정은 로컬 `next start` 기준이라 Vercel에서는 목록과 상세의 노션 호출이 측정보다 많을 수 있습니다. 배포 후 응답 시간으로 확인하고 필요하면 `use cache: remote`를 검토합니다.
 - **목록과 상세 값 차이**: 총 금액이 비었거나 롤업이 `incomplete`면 목록은 "-", 상세는 항목 합계를 보여 줍니다. 목록과 상세 캐시가 따로라 1분 안에서는 서로 다른 시점 값일 수 있습니다(`/api/revalidate`는 둘 다 만료).
 - **데이터 소스**: 노션 DB에 데이터 소스가 여러 개면 목록이 오류로 닫힙니다(의도된 동작). 그런 DB를 쓰게 되면 데이터 소스 ID 설정 추가를 검토합니다.
-- **기록 불일치**: 승인/거절 테스트 데이터 유무가 Task 008(② PDF 상태 "승인")과 Task 012("데이터 없음") 기록에서 엇갈립니다. Task 018에서 실제 값으로 정리합니다.
+- **기록 불일치(해소, Task 018)**: 승인/거절 테스트 데이터 유무가 Task 008(② PDF 상태 "승인")과 Task 012("데이터 없음") 기록에서 엇갈렸으나, 2026-11-21 현재 DB에 대기 5, 승인 3, 거절 2건이 있어 Task 012의 "데이터 없음"이 현재와 맞지 않습니다. 승인/거절 배지는 라이트/다크에서 구분됩니다.
 - **상태 속성 타입**: PRD와 README는 `Select`로 적었지만 Task 005 기록상 실제 노션 속성은 `status` 타입일 수 있습니다(기본값 `대기` 자동 입력). `readSelect`가 둘 다 처리해 표시는 문제없지만, 나중에 상태 필터를 넣으면 필터 문법이 다릅니다.
-- **로그아웃 후 브라우저 캐시**: 뒤로 가기(bfcache)로 이전 목록 화면이 잠깐 보일 수 있습니다. Task 018에서 확인하고 필요하면 관리자 응답의 캐시 헤더를 조정합니다.
+- **로그아웃 후 브라우저 캐시(확인 결과, Task 018)**: 뒤로 가기 후 화면에는 로그인 화면만 보이고 이전 목록 DOM은 `display: none`으로 숨겨져 남을 뿐이며 새로고침하면 사라집니다. 인증된 `/admin` 응답은 `Cache-Control: no-store`입니다. 캐시 헤더는 조정하지 않았습니다.
+- **`NEXT_PUBLIC_SITE_URL` 빌드 시점 반영**: 값을 바꾸면 다시 빌드해야 목록의 복사 링크에 반영됩니다(운영 빌드에서 확인). 배포 환경변수를 바꾼 뒤에는 재배포가 필요합니다.
 
 ## 보류 항목 (이번 범위 밖)
 
@@ -284,6 +285,6 @@ Task 015 (목록 조회 계층) ───────┘
 
 ---
 
-**문서 버전**: v5.0
+**문서 버전**: v5.1
 **최종 업데이트**: 2026-11-21
-**진행 상황**: Phase 6 진행 중 (3/5 Tasks, Task 014~018). Task 017 완료(2026-11-21). Task 016은 구현과 검증 완료이나 노션 쓰기가 필요한 1건 미확인으로 ✅ 보류. Task 014 완료, Task 015 완료(노션 쓰기가 필요한 2건은 사용자 결정으로 확인 생략). Phase 5까지 완료(v4.0, `docs/roadmaps/ROADMAP_v1.md`)
+**진행 상황**: Phase 6~7 완료 (5/5 Tasks, Task 014~018). Task 014~018 모두 ✅. 사용자 결정으로 확인을 생략한 항목: Task 015의 노션 쓰기가 필요한 2건(총 금액 `null` 매핑, 값 수정 후 반영), Task 016의 노션 값 수정 후 "새로고침" 반영 1건. Task 018은 빈 상태, 스켈레톤, 상태 없음 배지를 Task 016 기록으로 갈음했고 이 세 화면의 시스템 모드는 확인하지 않음. Phase 5까지 완료(v4.0, `docs/roadmaps/ROADMAP_v1.md`)
