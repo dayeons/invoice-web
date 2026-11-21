@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 
 import { isNotionId } from "@/lib/notion/id";
 import { invoiceCacheTag } from "@/lib/notion/invoice";
+import { INVOICE_LIST_CACHE_TAG } from "@/lib/notion/invoiceList";
 
 // 견적서 캐시 즉시 재검증 (Task 009 T14)
 // 노션 값을 고친 직후 화면과 PDF에 바로 반영하고 싶을 때 서버나 자동화가 호출합니다.
@@ -53,5 +54,7 @@ export async function POST(request: Request) {
 
   // 외부 호출에서는 updateTag를 쓸 수 없으므로 { expire: 0 }으로 다음 요청이 바로 새로 조회하게 합니다.
   revalidateTag(invoiceCacheTag(id), { expire: 0 });
+  // 관리자 목록 캐시도 같은 요청에서 만료시킵니다. 응답 계약은 그대로입니다.
+  revalidateTag(INVOICE_LIST_CACHE_TAG, { expire: 0 });
   return json({ revalidated: true }, 200);
 }
